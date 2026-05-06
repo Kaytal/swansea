@@ -180,6 +180,29 @@ body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* Layout toggle */
+.layout-toggle {
+  display: flex;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.layout-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255,255,255,.55);
+  padding: .35rem .5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, color .15s;
+  line-height: 0;
+}
+.layout-btn:hover { background: rgba(255,255,255,.1); color: var(--header-text); }
+.layout-btn.active { background: rgba(255,255,255,.15); color: var(--header-text); }
+.layout-btn + .layout-btn { border-left: 1px solid rgba(255,255,255,.2); }
+
 /* Book grid */
 .book-grid {
   display: grid;
@@ -259,6 +282,66 @@ body {
   gap: .5rem;
   padding: .6rem .75rem;
   border-top: 1px solid var(--border);
+}
+
+/* List mode */
+.list-mode .book-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.list-mode .book-card {
+  flex-direction: row;
+  align-items: center;
+  border-radius: 0;
+  box-shadow: none;
+  border-bottom: 1px solid var(--border);
+}
+.list-mode .book-card:last-child { border-bottom: none; }
+.list-mode .book-card:hover { transform: none; box-shadow: none; background: #f8f7f5; }
+.list-mode .book-cover,
+.list-mode .book-cover-placeholder { display: none; }
+.list-mode .book-info {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 1rem;
+  padding: .625rem .75rem;
+  flex-wrap: nowrap;
+}
+.list-mode .book-title {
+  display: block;
+  overflow: hidden;
+  -webkit-line-clamp: unset;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  flex: 2;
+  min-width: 0;
+}
+.list-mode .book-authors {
+  display: block;
+  -webkit-line-clamp: unset;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1.5;
+  min-width: 0;
+}
+.list-mode .book-meta {
+  margin-top: 0;
+  padding-top: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 3rem;
+}
+.list-mode .book-actions {
+  border-top: none;
+  padding: .5rem .75rem;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 /* Empty state */

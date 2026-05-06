@@ -37,6 +37,20 @@
     </select>
   </div>
   <div class="header-actions">
+    <div class="layout-toggle">
+      <button class="layout-btn" :class="layout === 'grid' && 'active'" @click="setLayout('grid')" title="Grid view">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/>
+          <rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/>
+        </svg>
+      </button>
+      <button class="layout-btn" :class="layout === 'list' && 'active'" @click="setLayout('list')" title="List view">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <rect x="1" y="2" width="14" height="2.5" rx="1"/><rect x="1" y="6.75" width="14" height="2.5" rx="1"/>
+          <rect x="1" y="11.5" width="14" height="2.5" rx="1"/>
+        </svg>
+      </button>
+    </div>
     <button class="btn btn-secondary"
             @click="openScanner()">
       Scan ISBN
@@ -57,6 +71,7 @@
        hx-swap="innerHTML">
   </div>
   <div id="book-grid"
+       :class="layout === 'list' && 'list-mode'"
        hx-get="{{.InitialBooksURL}}"
        hx-trigger="load"
        hx-swap="innerHTML">
@@ -127,6 +142,11 @@
 <script>
 function app() {
   return {
+    layout: localStorage.getItem('swansea-layout') || 'grid',
+    setLayout(v) {
+      this.layout = v;
+      localStorage.setItem('swansea-layout', v);
+    },
     openModal() {
       document.getElementById('modal').showModal();
     },
