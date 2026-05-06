@@ -5,7 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
+	"swansea/covers"
 	"swansea/db"
 	"swansea/handlers"
 	"swansea/store"
@@ -20,6 +22,11 @@ func main() {
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
 		dbPath = "/data/swansea.db"
+	}
+
+	metadataPath := os.Getenv("METADATA_PATH")
+	if metadataPath == "" {
+		metadataPath = "/metadata"
 	}
 
 	database, err := db.Open(dbPath)
@@ -41,7 +48,8 @@ func main() {
 	handlers.NewBooks(bookStore).Register(mux)
 
 	// HTML UI
-	ui, err := handlers.NewUI(bookStore, assets)
+	cv := covers.New(filepath.Join(metadataPath, "covers"))
+	ui, err := handlers.NewUI(bookStore, assets, cv, metadataPath)
 	if err != nil {
 		log.Fatalf("failed to load templates: %v", err)
 	}

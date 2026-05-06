@@ -6,8 +6,10 @@ services:
     environment:
       - PORT=8080
       - DB_PATH=/data/swansea.db
+      - METADATA_PATH=/metadata
     env_file:
       - .env
     volumes:
       - ./db:/data
+      - ./metadata:/metadata
     restart: unless-stopped

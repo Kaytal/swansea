@@ -12,7 +12,7 @@
     {{if .Publisher}}<p>{{.Publisher}}{{if .PublishedDate}} &middot; {{year .PublishedDate}}{{end}}</p>{{end}}
     <div class="scan-preview-actions">
       <button class="btn btn-primary btn-sm"
-              hx-post="/ui/books/isbn/{{.ISBN}}"
+              hx-post="/ui/books/isbn/{{.ISBN}}?source={{.Source}}"
               hx-target="#book-grid"
               hx-swap="innerHTML">
         Add to Library

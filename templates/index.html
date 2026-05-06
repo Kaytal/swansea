@@ -60,6 +60,12 @@
     <button :class="tab === 'camera' && 'active'" @click="tab = 'camera'; startCamera()">Camera</button>
   </div>
 
+  <!-- Source selector (shared between tabs) -->
+  <div class="source-row">
+    <label><input type="radio" x-model="source" value="google"> Google Books</label>
+    <label><input type="radio" x-model="source" value="openlibrary"> Open Library</label>
+  </div>
+
   <!-- USB / type tab -->
   <div class="scanner-content" x-show="tab === 'usb'">
     <p class="hint">Scan with a USB barcode scanner, or type the ISBN and press Enter.</p>
@@ -122,6 +128,7 @@ function scanner() {
   return {
     tab: 'usb',
     isbn: '',
+    source: 'google',
     cameraActive: false,
     cameraError: null,
     stream: null,

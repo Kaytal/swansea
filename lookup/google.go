@@ -34,7 +34,21 @@ type googleResponse struct {
 	} `json:"items"`
 }
 
+// For returns the lookup function for the given source name.
+// Unknown sources default to Google Books.
+func For(source string) func(string) (*store.BookInput, error) {
+	if source == "openlibrary" {
+		return OpenLibraryByISBN
+	}
+	return GoogleByISBN
+}
+
+// ByISBN is kept as an alias for backwards compatibility with the JSON API handler.
 func ByISBN(isbn string) (*store.BookInput, error) {
+	return GoogleByISBN(isbn)
+}
+
+func GoogleByISBN(isbn string) (*store.BookInput, error) {
 	isbn = strings.ReplaceAll(isbn, "-", "")
 	url := fmt.Sprintf("https://www.googleapis.com/books/v1/volumes?q=isbn:%s", isbn)
 	if key := os.Getenv("GOOGLE_BOOKS_API_KEY"); key != "" {

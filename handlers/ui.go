@@ -9,16 +9,19 @@ import (
 	"strconv"
 	"strings"
 
+	"swansea/covers"
 	"swansea/lookup"
 	"swansea/store"
 )
 
 type UI struct {
-	store *store.Books
-	tmpls *template.Template
+	store        *store.Books
+	tmpls        *template.Template
+	covers       *covers.Store
+	metadataPath string
 }
 
-func NewUI(s *store.Books, assets fs.FS) (*UI, error) {
+func NewUI(s *store.Books, assets fs.FS, cv *covers.Store, metadataPath string) (*UI, error) {
 	funcMap := template.FuncMap{
 		"join":      strings.Join,
 		"joinLines": func(ss []string) string { return strings.Join(ss, "\n") },
@@ -36,12 +39,15 @@ func NewUI(s *store.Books, assets fs.FS) (*UI, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &UI{store: s, tmpls: tmpls}, nil
+	return &UI{store: s, tmpls: tmpls, covers: cv, metadataPath: metadataPath}, nil
 }
 
 func (h *UI) Register(mux *http.ServeMux, assets fs.FS) {
 	static, _ := fs.Sub(assets, "static")
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
+	if h.metadataPath != "" {
+		mux.Handle("GET /metadata/", http.StripPrefix("/metadata/", http.FileServer(http.Dir(h.metadataPath))))
+	}
 
 	mux.HandleFunc("GET /", h.index)
 	mux.HandleFunc("GET /ui/books", h.books)
@@ -52,6 +58,14 @@ func (h *UI) Register(mux *http.ServeMux, assets fs.FS) {
 	mux.HandleFunc("DELETE /ui/books/{id}", h.delete)
 	mux.HandleFunc("GET /ui/lookup/{isbn}", h.lookupPreview)
 	mux.HandleFunc("POST /ui/books/isbn/{isbn}", h.addByISBN)
+}
+
+func (h *UI) maybeDownloadCover(in *store.BookInput, bookID int64) {
+	key := in.ISBN
+	if key == "" {
+		key = strconv.FormatInt(bookID, 10)
+	}
+	in.CoverURL = h.covers.Download(in.CoverURL, key)
 }
 
 func (h *UI) render(w http.ResponseWriter, name string, data any) {
@@ -90,9 +104,16 @@ func (h *UI) addForm(w http.ResponseWriter, r *http.Request) {
 
 func (h *UI) create(w http.ResponseWriter, r *http.Request) {
 	in := parseBookForm(r)
-	if _, err := h.store.Create(in); err != nil {
+	book, err := h.store.Create(in)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	h.maybeDownloadCover(&in, book.ID)
+	if in.CoverURL != book.CoverURL {
+		if updated, err := h.store.Update(book.ID, in); err == nil {
+			_ = updated
+		}
 	}
 	books, err := h.store.List()
 	if err != nil {
@@ -128,6 +149,7 @@ func (h *UI) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in := parseBookForm(r)
+	h.maybeDownloadCover(&in, id)
 	book, err := h.store.Update(id, in)
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(w, r)
@@ -156,26 +178,29 @@ func (h *UI) delete(w http.ResponseWriter, r *http.Request) {
 
 type scanPreviewData struct {
 	*store.BookInput
-	Error string
+	Error  string
+	Source string
 }
 
 func (h *UI) lookupPreview(w http.ResponseWriter, r *http.Request) {
 	isbn := r.PathValue("isbn")
-	result, err := lookup.ByISBN(isbn)
+	source := r.URL.Query().Get("source")
+	result, err := lookup.For(source)(isbn)
 	if err != nil {
-		h.render(w, "scan_preview.html", scanPreviewData{Error: err.Error()})
+		h.render(w, "scan_preview.html", scanPreviewData{Error: err.Error(), Source: source})
 		return
 	}
-	h.render(w, "scan_preview.html", scanPreviewData{BookInput: result})
+	h.render(w, "scan_preview.html", scanPreviewData{BookInput: result, Source: source})
 }
 
 func (h *UI) addByISBN(w http.ResponseWriter, r *http.Request) {
 	isbn := r.PathValue("isbn")
-	in, err := lookup.ByISBN(isbn)
+	in, err := lookup.For(r.URL.Query().Get("source"))(isbn)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+	h.maybeDownloadCover(in, 0) // key will be ISBN from in.ISBN
 	if _, err := h.store.Create(*in); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
