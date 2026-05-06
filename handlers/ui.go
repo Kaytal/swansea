@@ -31,6 +31,8 @@ func NewUI(s *store.Books, assets fs.FS, cv *covers.Store, metadataPath string) 
 			}
 			return date
 		},
+		"add": func(a, b int) int { return a + b },
+		"sub": func(a, b int) int { return a - b },
 	}
 	tmpls, err := template.New("").Funcs(funcMap).ParseFS(assets,
 		"templates/index.html",
@@ -56,6 +58,7 @@ func (h *UI) Register(mux *http.ServeMux, assets fs.FS) {
 	mux.HandleFunc("GET /ui/books/{id}/edit", h.editForm)
 	mux.HandleFunc("PUT /ui/books/{id}", h.update)
 	mux.HandleFunc("DELETE /ui/books/{id}", h.delete)
+	mux.HandleFunc("GET /ui/filters", h.filters)
 	mux.HandleFunc("GET /ui/lookup/{isbn}", h.lookupPreview)
 	mux.HandleFunc("POST /ui/books/isbn/{isbn}", h.addByISBN)
 }
@@ -86,16 +89,87 @@ func (h *UI) index(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "index.html", nil)
 }
 
+type booksPageData struct {
+	Books       []*store.Book
+	Page        int
+	TotalPages  int
+	HasPrev     bool
+	HasNext     bool
+	FilterField string
+	FilterValue string
+}
+
+func (h *UI) buildPage(page int, filterField, filterValue string) (booksPageData, error) {
+	if page < 1 {
+		page = 1
+	}
+	offset := (page - 1) * store.PageSize
+
+	var books []*store.Book
+	var total int
+	var err error
+
+	if filterField != "" && filterValue != "" {
+		books, err = h.store.ListFiltered(filterField, filterValue, store.PageSize, offset)
+		if err != nil {
+			return booksPageData{}, err
+		}
+		total, err = h.store.CountFiltered(filterField, filterValue)
+	} else {
+		books, err = h.store.ListPage(store.PageSize, offset)
+		if err != nil {
+			return booksPageData{}, err
+		}
+		total, err = h.store.Count()
+	}
+	if err != nil {
+		return booksPageData{}, err
+	}
+
+	totalPages := (total + store.PageSize - 1) / store.PageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	return booksPageData{
+		Books:       books,
+		Page:        page,
+		TotalPages:  totalPages,
+		HasPrev:     page > 1,
+		HasNext:     page < totalPages,
+		FilterField: filterField,
+		FilterValue: filterValue,
+	}, nil
+}
+
+func (h *UI) booksPage(page int) (booksPageData, error) {
+	return h.buildPage(page, "", "")
+}
+
 func (h *UI) books(w http.ResponseWriter, r *http.Request) {
-	books, err := h.store.List()
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	var filterField, filterValue string
+	for _, f := range []string{"category", "author", "year"} {
+		if v := r.URL.Query().Get(f); v != "" {
+			filterField = f
+			filterValue = v
+			break
+		}
+	}
+	data, err := h.buildPage(page, filterField, filterValue)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if books == nil {
-		books = []*store.Book{}
+	h.render(w, "books.html", data)
+}
+
+func (h *UI) filters(w http.ResponseWriter, r *http.Request) {
+	fv, err := h.store.FilterValues()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	h.render(w, "books.html", books)
+	h.render(w, "filters.html", fv)
 }
 
 func (h *UI) addForm(w http.ResponseWriter, r *http.Request) {
@@ -115,13 +189,13 @@ func (h *UI) create(w http.ResponseWriter, r *http.Request) {
 			_ = updated
 		}
 	}
-	books, err := h.store.List()
+	data, err := h.booksPage(1)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("HX-Trigger", "closeModal")
-	h.render(w, "books.html", books)
+	h.render(w, "books.html", data)
 }
 
 func (h *UI) editForm(w http.ResponseWriter, r *http.Request) {
@@ -205,13 +279,13 @@ func (h *UI) addByISBN(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	books, err := h.store.List()
+	data, err := h.booksPage(1)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("HX-Trigger", "closeScanner")
-	h.render(w, "books.html", books)
+	h.render(w, "books.html", data)
 }
 
 func parseBookForm(r *http.Request) store.BookInput {

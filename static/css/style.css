@@ -57,6 +57,53 @@ body {
   margin: 0 auto;
 }
 
+.layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.filter-sidebar {
+  position: sticky;
+  top: 80px;
+}
+.filter-all {
+  display: block;
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+  margin-bottom: 1.25rem;
+}
+.filter-all:hover { text-decoration: underline; }
+.filter-section { margin-bottom: 1.5rem; }
+.filter-heading {
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-muted);
+  margin-bottom: .5rem;
+}
+.filter-list { list-style: none; }
+.filter-link {
+  display: block;
+  font-size: .85rem;
+  color: var(--text);
+  text-decoration: none;
+  padding: .2rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.filter-link:hover { color: var(--primary); }
+
+@media (max-width: 700px) {
+  .layout { grid-template-columns: 1fr; }
+  .filter-sidebar { position: static; }
+}
+
 /* Buttons */
 .btn {
   display: inline-flex;
@@ -86,6 +133,18 @@ body {
 .btn-danger:hover { background: var(--danger-hover); }
 
 .btn-sm { padding: .3rem .7rem; font-size: .8rem; }
+.btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* Book grid */
 .book-grid {
@@ -176,6 +235,18 @@ body {
   color: var(--text-muted);
 }
 .empty-state p { font-size: 1.1rem; margin-bottom: 1rem; }
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 0 1rem;
+  grid-column: 1 / -1;
+}
+.pagination-info { font-size: .85rem; color: var(--text-muted); }
+.pagination .btn[disabled] { opacity: .35; cursor: default; pointer-events: none; }
 
 /* Loading */
 .loading {

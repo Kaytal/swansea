@@ -1,7 +1,7 @@
 {{define "books.html"}}
-{{if .}}
+{{if .Books}}
 <div class="book-grid">
-  {{range .}}
+  {{range .Books}}
     {{template "book_card.html" .}}
   {{end}}
 </div>
@@ -13,4 +13,5 @@
   </div>
 </div>
 {{end}}
+{{template "pagination.html" .}}
 {{end}}

@@ -1,0 +1,23 @@
+{{define "pagination.html"}}
+{{if gt .TotalPages 1}}
+<nav class="pagination">
+  {{if .HasPrev}}
+    <button class="btn btn-ghost btn-sm"
+            hx-get="/ui/books?page={{sub .Page 1}}{{if .FilterField}}&{{.FilterField}}={{urlquery .FilterValue}}{{end}}"
+            hx-target="#book-grid"
+            hx-swap="innerHTML">&larr; Prev</button>
+  {{else}}
+    <button class="btn btn-ghost btn-sm" disabled>&larr; Prev</button>
+  {{end}}
+  <span class="pagination-info">Page {{.Page}} of {{.TotalPages}}</span>
+  {{if .HasNext}}
+    <button class="btn btn-ghost btn-sm"
+            hx-get="/ui/books?page={{add .Page 1}}{{if .FilterField}}&{{.FilterField}}={{urlquery .FilterValue}}{{end}}"
+            hx-target="#book-grid"
+            hx-swap="innerHTML">Next &rarr;</button>
+  {{else}}
+    <button class="btn btn-ghost btn-sm" disabled>Next &rarr;</button>
+  {{end}}
+</nav>
+{{end}}
+{{end}}

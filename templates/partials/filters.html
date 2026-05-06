@@ -1,0 +1,62 @@
+{{define "filters.html"}}
+<aside class="filter-sidebar">
+  <div class="filter-section">
+    <a class="filter-all"
+       hx-get="/ui/books"
+       hx-target="#book-grid"
+       hx-swap="innerHTML"
+       href="#">All Books</a>
+  </div>
+
+  {{if .Categories}}
+  <div class="filter-section">
+    <h3 class="filter-heading">Categories</h3>
+    <ul class="filter-list">
+      {{range .Categories}}
+      <li>
+        <a class="filter-link"
+           hx-get="/ui/books?category={{urlquery .}}"
+           hx-target="#book-grid"
+           hx-swap="innerHTML"
+           href="#">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
+
+  {{if .Authors}}
+  <div class="filter-section">
+    <h3 class="filter-heading">Authors</h3>
+    <ul class="filter-list">
+      {{range .Authors}}
+      <li>
+        <a class="filter-link"
+           hx-get="/ui/books?author={{urlquery .}}"
+           hx-target="#book-grid"
+           hx-swap="innerHTML"
+           href="#">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
+
+  {{if .Years}}
+  <div class="filter-section">
+    <h3 class="filter-heading">Year</h3>
+    <ul class="filter-list">
+      {{range .Years}}
+      <li>
+        <a class="filter-link"
+           hx-get="/ui/books?year={{.}}"
+           hx-target="#book-grid"
+           hx-swap="innerHTML"
+           href="#">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
+</aside>
+{{end}}

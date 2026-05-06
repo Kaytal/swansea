@@ -84,6 +84,34 @@ func scanBook(row interface{ Scan(...any) error }) (*Book, error) {
 const selectCols = `id, isbn, title, authors, publisher, published_date,
 	description, page_count, cover_url, categories, created_at, updated_at`
 
+const PageSize = 25
+
+func (s *Books) ListPage(limit, offset int) ([]*Book, error) {
+	rows, err := s.db.Query(fmt.Sprintf(
+		`SELECT %s FROM books ORDER BY title LIMIT ? OFFSET ?`, selectCols,
+	), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var books []*Book
+	for rows.Next() {
+		b, err := scanBook(rows)
+		if err != nil {
+			return nil, err
+		}
+		books = append(books, b)
+	}
+	return books, rows.Err()
+}
+
+func (s *Books) Count() (int, error) {
+	var n int
+	err := s.db.QueryRow(`SELECT COUNT(*) FROM books`).Scan(&n)
+	return n, err
+}
+
 func (s *Books) List() ([]*Book, error) {
 	rows, err := s.db.Query(fmt.Sprintf(`SELECT %s FROM books ORDER BY title`, selectCols))
 	if err != nil {
@@ -100,6 +128,124 @@ func (s *Books) List() ([]*Book, error) {
 		books = append(books, b)
 	}
 	return books, rows.Err()
+}
+
+func (s *Books) ListFiltered(field, value string, limit, offset int) ([]*Book, error) {
+	var query string
+	switch field {
+	case "category":
+		query = fmt.Sprintf(`SELECT %s FROM books WHERE EXISTS (
+			SELECT 1 FROM json_each(categories) WHERE LOWER(json_each.value) = LOWER(?)
+		) ORDER BY title LIMIT ? OFFSET ?`, selectCols)
+	case "author":
+		query = fmt.Sprintf(`SELECT %s FROM books WHERE EXISTS (
+			SELECT 1 FROM json_each(authors) WHERE LOWER(json_each.value) = LOWER(?)
+		) ORDER BY title LIMIT ? OFFSET ?`, selectCols)
+	case "year":
+		query = fmt.Sprintf(`SELECT %s FROM books WHERE substr(published_date,1,4) = ? ORDER BY title LIMIT ? OFFSET ?`, selectCols)
+	default:
+		return s.ListPage(limit, offset)
+	}
+	rows, err := s.db.Query(query, value, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var books []*Book
+	for rows.Next() {
+		b, err := scanBook(rows)
+		if err != nil {
+			return nil, err
+		}
+		books = append(books, b)
+	}
+	return books, rows.Err()
+}
+
+func (s *Books) CountFiltered(field, value string) (int, error) {
+	var query string
+	switch field {
+	case "category":
+		query = `SELECT COUNT(*) FROM books WHERE EXISTS (
+			SELECT 1 FROM json_each(categories) WHERE LOWER(json_each.value) = LOWER(?))`
+	case "author":
+		query = `SELECT COUNT(*) FROM books WHERE EXISTS (
+			SELECT 1 FROM json_each(authors) WHERE LOWER(json_each.value) = LOWER(?))`
+	case "year":
+		query = `SELECT COUNT(*) FROM books WHERE substr(published_date,1,4) = ?`
+	default:
+		return s.Count()
+	}
+	var n int
+	err := s.db.QueryRow(query, value).Scan(&n)
+	return n, err
+}
+
+type FilterValues struct {
+	Categories []string
+	Authors    []string
+	Years      []string
+}
+
+func (s *Books) FilterValues() (*FilterValues, error) {
+	fv := &FilterValues{}
+
+	catRows, err := s.db.Query(`
+		SELECT DISTINCT json_each.value FROM books, json_each(books.categories)
+		WHERE json_each.value != '' ORDER BY json_each.value`)
+	if err != nil {
+		return nil, err
+	}
+	defer catRows.Close()
+	for catRows.Next() {
+		var v string
+		if err := catRows.Scan(&v); err != nil {
+			return nil, err
+		}
+		fv.Categories = append(fv.Categories, v)
+	}
+	if err := catRows.Err(); err != nil {
+		return nil, err
+	}
+
+	authorRows, err := s.db.Query(`
+		SELECT DISTINCT json_each.value FROM books, json_each(books.authors)
+		WHERE json_each.value != '' ORDER BY json_each.value`)
+	if err != nil {
+		return nil, err
+	}
+	defer authorRows.Close()
+	for authorRows.Next() {
+		var v string
+		if err := authorRows.Scan(&v); err != nil {
+			return nil, err
+		}
+		fv.Authors = append(fv.Authors, v)
+	}
+	if err := authorRows.Err(); err != nil {
+		return nil, err
+	}
+
+	yearRows, err := s.db.Query(`
+		SELECT DISTINCT substr(published_date,1,4) as yr FROM books
+		WHERE yr != '' AND yr IS NOT NULL AND yr GLOB '[0-9][0-9][0-9][0-9]'
+		ORDER BY yr DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer yearRows.Close()
+	for yearRows.Next() {
+		var v string
+		if err := yearRows.Scan(&v); err != nil {
+			return nil, err
+		}
+		fv.Years = append(fv.Years, v)
+	}
+	if err := yearRows.Err(); err != nil {
+		return nil, err
+	}
+
+	return fv, nil
 }
 
 func (s *Books) Get(id int64) (*Book, error) {
