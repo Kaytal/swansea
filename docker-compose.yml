@@ -6,6 +6,8 @@ services:
     environment:
       - PORT=8080
       - DB_PATH=/data/swansea.db
+    env_file:
+      - .env
     volumes:
       - ./db:/data
     restart: unless-stopped

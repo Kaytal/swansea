@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"errors"
 	"html/template"
 	"io/fs"
@@ -54,10 +55,13 @@ func (h *UI) Register(mux *http.ServeMux, assets fs.FS) {
 }
 
 func (h *UI) render(w http.ResponseWriter, name string, data any) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := h.tmpls.ExecuteTemplate(w, name, data); err != nil {
+	var buf bytes.Buffer
+	if err := h.tmpls.ExecuteTemplate(&buf, name, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	buf.WriteTo(w)
 }
 
 func (h *UI) index(w http.ResponseWriter, r *http.Request) {
@@ -150,14 +154,19 @@ func (h *UI) delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+type scanPreviewData struct {
+	*store.BookInput
+	Error string
+}
+
 func (h *UI) lookupPreview(w http.ResponseWriter, r *http.Request) {
 	isbn := r.PathValue("isbn")
 	result, err := lookup.ByISBN(isbn)
 	if err != nil {
-		h.render(w, "scan_preview.html", map[string]string{"Error": err.Error()})
+		h.render(w, "scan_preview.html", scanPreviewData{Error: err.Error()})
 		return
 	}
-	h.render(w, "scan_preview.html", result)
+	h.render(w, "scan_preview.html", scanPreviewData{BookInput: result})
 }
 
 func (h *UI) addByISBN(w http.ResponseWriter, r *http.Request) {

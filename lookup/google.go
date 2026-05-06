@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -36,6 +37,9 @@ type googleResponse struct {
 func ByISBN(isbn string) (*store.BookInput, error) {
 	isbn = strings.ReplaceAll(isbn, "-", "")
 	url := fmt.Sprintf("https://www.googleapis.com/books/v1/volumes?q=isbn:%s", isbn)
+	if key := os.Getenv("GOOGLE_BOOKS_API_KEY"); key != "" {
+		url += "&key=" + key
+	}
 
 	resp, err := httpClient.Get(url)
 	if err != nil {
