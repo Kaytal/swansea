@@ -8,7 +8,7 @@ A personal book library server. Add books manually, by typing an ISBN, or by sca
 - **Multiple metadata sources** — Google Books and Open Library; selectable per scan
 - **Local cover caching** — cover images are downloaded and served from the host, not fetched remotely on every load
 - **Pagination** — 25 books per page
-- **Browse by facet** — filter by category, author, or publication year via the sidebar
+- **Browse by facet** — filter by category, author, or publication year via the sidebar; each filter has a bookmarkable URL (`/category/Fiction`, `/author/Hemingway`, `/year/1952`)
 - **Fuzzy search** — type-ahead title and author search powered by SQLite FTS5
 
 ## Running with Docker
@@ -58,10 +58,13 @@ docker compose up --build
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/` | Main library page |
-| `GET` | `/ui/books?page=N` | Book grid (page N, 25 per page) |
-| `GET` | `/ui/books?category=X` | Filter by category |
-| `GET` | `/ui/books?author=X` | Filter by author |
-| `GET` | `/ui/books?year=YYYY` | Filter by publication year |
+| `GET` | `/category/{value}` | Bookmarkable filtered view by category |
+| `GET` | `/author/{value}` | Bookmarkable filtered view by author |
+| `GET` | `/year/{value}` | Bookmarkable filtered view by year |
+| `GET` | `/ui/books?page=N` | Book grid fragment (page N, 25 per page) |
+| `GET` | `/ui/books?category=X` | Filtered book grid fragment |
+| `GET` | `/ui/books?author=X` | Filtered book grid fragment |
+| `GET` | `/ui/books?year=YYYY` | Filtered book grid fragment |
 | `GET` | `/ui/search?q=X&field=title\|author` | Full-text search |
 | `GET` | `/ui/filters` | Sidebar with distinct facet values |
 
