@@ -266,6 +266,15 @@ body {
 }
 
 /* Scanner */
+.source-row {
+  display: flex;
+  gap: 1.25rem;
+  padding: .75rem 1.5rem .25rem;
+  font-size: .85rem;
+  color: var(--text-muted);
+}
+.source-row label { display: flex; align-items: center; gap: .35rem; cursor: pointer; }
+
 .scanner-tabs {
   display: flex;
   border-bottom: 2px solid var(--border);

@@ -138,7 +138,7 @@ function scanner() {
     lookupISBN() {
       const isbn = this.isbn.trim().replace(/-/g, '');
       if (!isbn) return;
-      htmx.ajax('GET', `/ui/lookup/${isbn}`, {
+      htmx.ajax('GET', `/ui/lookup/${isbn}?source=${this.source}`, {
         target: '#scan-result',
         swap: 'innerHTML',
       });
@@ -173,7 +173,7 @@ function scanner() {
           this.stopCamera();
           this.isbn = isbn;
           this.tab = 'usb';
-          htmx.ajax('GET', `/ui/lookup/${isbn}`, {
+          htmx.ajax('GET', `/ui/lookup/${isbn}?source=${this.source}`, {
             target: '#scan-result',
             swap: 'innerHTML',
           });
