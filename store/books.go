@@ -81,8 +81,10 @@ func scanBook(row interface{ Scan(...any) error }) (*Book, error) {
 	return &b, nil
 }
 
-const selectCols = `id, isbn, title, authors, publisher, published_date,
-	description, page_count, cover_url, categories, created_at, updated_at`
+const selectCols = `id, COALESCE(isbn,''), title, COALESCE(authors,'[]'),
+	COALESCE(publisher,''), COALESCE(published_date,''),
+	COALESCE(description,''), page_count, COALESCE(cover_url,''),
+	COALESCE(categories,'[]'), created_at, updated_at`
 
 const PageSize = 25
 
