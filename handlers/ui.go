@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -32,8 +33,9 @@ func NewUI(s *store.Books, assets fs.FS, cv *covers.Store, metadataPath string) 
 			}
 			return date
 		},
-		"add": func(a, b int) int { return a + b },
-		"sub": func(a, b int) int { return a - b },
+		"add":     func(a, b int) int { return a + b },
+		"sub":     func(a, b int) int { return a - b },
+		"pathesc": url.PathEscape,
 	}
 	tmpls, err := template.New("").Funcs(funcMap).ParseFS(assets,
 		"templates/index.html",
@@ -53,6 +55,9 @@ func (h *UI) Register(mux *http.ServeMux, assets fs.FS) {
 	}
 
 	mux.HandleFunc("GET /", h.index)
+	mux.HandleFunc("GET /category/{value}", h.filterPageHandler("category"))
+	mux.HandleFunc("GET /author/{value}", h.filterPageHandler("author"))
+	mux.HandleFunc("GET /year/{value}", h.filterPageHandler("year"))
 	mux.HandleFunc("GET /ui/books", h.books)
 	mux.HandleFunc("GET /ui/books/add", h.addForm)
 	mux.HandleFunc("POST /ui/books", h.create)
@@ -93,12 +98,24 @@ func (h *UI) render(w http.ResponseWriter, name string, data any) {
 	buf.WriteTo(w)
 }
 
+type indexData struct {
+	InitialBooksURL string
+}
+
 func (h *UI) index(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
-	h.render(w, "index.html", nil)
+	h.render(w, "index.html", indexData{InitialBooksURL: "/ui/books"})
+}
+
+func (h *UI) filterPageHandler(field string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		value := r.PathValue("value")
+		apiURL := "/ui/books?" + field + "=" + url.QueryEscape(value)
+		h.render(w, "index.html", indexData{InitialBooksURL: apiURL})
+	}
 }
 
 type booksPageData struct {
@@ -109,6 +126,7 @@ type booksPageData struct {
 	HasNext     bool
 	FilterField string
 	FilterValue string
+	RouteBase   string
 	Query       string
 	SearchField string
 }
@@ -144,6 +162,10 @@ func (h *UI) buildPage(page int, filterField, filterValue string) (booksPageData
 	if totalPages < 1 {
 		totalPages = 1
 	}
+	routeBase := ""
+	if filterField != "" && filterValue != "" {
+		routeBase = "/" + filterField + "/" + url.PathEscape(filterValue)
+	}
 	return booksPageData{
 		Books:       books,
 		Page:        page,
@@ -152,6 +174,7 @@ func (h *UI) buildPage(page int, filterField, filterValue string) (booksPageData
 		HasNext:     page < totalPages,
 		FilterField: filterField,
 		FilterValue: filterValue,
+		RouteBase:   routeBase,
 	}, nil
 }
 

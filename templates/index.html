@@ -57,7 +57,7 @@
        hx-swap="innerHTML">
   </div>
   <div id="book-grid"
-       hx-get="/ui/books"
+       hx-get="{{.InitialBooksURL}}"
        hx-trigger="load"
        hx-swap="innerHTML">
     <p class="loading">Loading your library...</p>

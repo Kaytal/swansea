@@ -4,12 +4,18 @@
 {{$next := add .Page 1}}
 {{$prevURL := ""}}
 {{$nextURL := ""}}
+{{$prevPush := ""}}
+{{$nextPush := ""}}
 {{if .Query}}
   {{$prevURL = printf "/ui/search?page=%d&q=%s&field=%s" $prev (urlquery .Query) .SearchField}}
   {{$nextURL = printf "/ui/search?page=%d&q=%s&field=%s" $next (urlquery .Query) .SearchField}}
 {{else if .FilterField}}
   {{$prevURL = printf "/ui/books?page=%d&%s=%s" $prev .FilterField (urlquery .FilterValue)}}
   {{$nextURL = printf "/ui/books?page=%d&%s=%s" $next .FilterField (urlquery .FilterValue)}}
+  {{if .RouteBase}}
+    {{$prevPush = printf "%s?page=%d" .RouteBase $prev}}
+    {{$nextPush = printf "%s?page=%d" .RouteBase $next}}
+  {{end}}
 {{else}}
   {{$prevURL = printf "/ui/books?page=%d" $prev}}
   {{$nextURL = printf "/ui/books?page=%d" $next}}
@@ -18,6 +24,7 @@
   {{if .HasPrev}}
     <button class="btn btn-ghost btn-sm"
             hx-get="{{$prevURL}}"
+            {{if $prevPush}}hx-push-url="{{$prevPush}}"{{end}}
             hx-target="#book-grid"
             hx-swap="innerHTML">&larr; Prev</button>
   {{else}}
@@ -27,6 +34,7 @@
   {{if .HasNext}}
     <button class="btn btn-ghost btn-sm"
             hx-get="{{$nextURL}}"
+            {{if $nextPush}}hx-push-url="{{$nextPush}}"{{end}}
             hx-target="#book-grid"
             hx-swap="innerHTML">Next &rarr;</button>
   {{else}}

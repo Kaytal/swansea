@@ -2,10 +2,11 @@
 <aside class="filter-sidebar">
   <div class="filter-section">
     <a class="filter-all"
+       href="/"
        hx-get="/ui/books"
+       hx-push-url="/"
        hx-target="#book-grid"
-       hx-swap="innerHTML"
-       href="#">All Books</a>
+       hx-swap="innerHTML">All Books</a>
   </div>
 
   {{if .Categories}}
@@ -15,10 +16,11 @@
       {{range .Categories}}
       <li>
         <a class="filter-link"
+           href="/category/{{pathesc .}}"
            hx-get="/ui/books?category={{urlquery .}}"
+           hx-push-url="/category/{{pathesc .}}"
            hx-target="#book-grid"
-           hx-swap="innerHTML"
-           href="#">{{.}}</a>
+           hx-swap="innerHTML">{{.}}</a>
       </li>
       {{end}}
     </ul>
@@ -32,10 +34,11 @@
       {{range .Authors}}
       <li>
         <a class="filter-link"
+           href="/author/{{pathesc .}}"
            hx-get="/ui/books?author={{urlquery .}}"
+           hx-push-url="/author/{{pathesc .}}"
            hx-target="#book-grid"
-           hx-swap="innerHTML"
-           href="#">{{.}}</a>
+           hx-swap="innerHTML">{{.}}</a>
       </li>
       {{end}}
     </ul>
@@ -49,10 +52,11 @@
       {{range .Years}}
       <li>
         <a class="filter-link"
+           href="/year/{{.}}"
            hx-get="/ui/books?year={{.}}"
+           hx-push-url="/year/{{.}}"
            hx-target="#book-grid"
-           hx-swap="innerHTML"
-           href="#">{{.}}</a>
+           hx-swap="innerHTML">{{.}}</a>
       </li>
       {{end}}
     </ul>
