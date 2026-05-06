@@ -1,9 +1,23 @@
 {{define "pagination.html"}}
 {{if gt .TotalPages 1}}
+{{$prev := sub .Page 1}}
+{{$next := add .Page 1}}
+{{$prevURL := ""}}
+{{$nextURL := ""}}
+{{if .Query}}
+  {{$prevURL = printf "/ui/search?page=%d&q=%s&field=%s" $prev (urlquery .Query) .SearchField}}
+  {{$nextURL = printf "/ui/search?page=%d&q=%s&field=%s" $next (urlquery .Query) .SearchField}}
+{{else if .FilterField}}
+  {{$prevURL = printf "/ui/books?page=%d&%s=%s" $prev .FilterField (urlquery .FilterValue)}}
+  {{$nextURL = printf "/ui/books?page=%d&%s=%s" $next .FilterField (urlquery .FilterValue)}}
+{{else}}
+  {{$prevURL = printf "/ui/books?page=%d" $prev}}
+  {{$nextURL = printf "/ui/books?page=%d" $next}}
+{{end}}
 <nav class="pagination">
   {{if .HasPrev}}
     <button class="btn btn-ghost btn-sm"
-            hx-get="/ui/books?page={{sub .Page 1}}{{if .FilterField}}&{{.FilterField}}={{urlquery .FilterValue}}{{end}}"
+            hx-get="{{$prevURL}}"
             hx-target="#book-grid"
             hx-swap="innerHTML">&larr; Prev</button>
   {{else}}
@@ -12,7 +26,7 @@
   <span class="pagination-info">Page {{.Page}} of {{.TotalPages}}</span>
   {{if .HasNext}}
     <button class="btn btn-ghost btn-sm"
-            hx-get="/ui/books?page={{add .Page 1}}{{if .FilterField}}&{{.FilterField}}={{urlquery .FilterValue}}{{end}}"
+            hx-get="{{$nextURL}}"
             hx-target="#book-grid"
             hx-swap="innerHTML">Next &rarr;</button>
   {{else}}

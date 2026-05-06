@@ -58,6 +58,7 @@ func (h *UI) Register(mux *http.ServeMux, assets fs.FS) {
 	mux.HandleFunc("GET /ui/books/{id}/edit", h.editForm)
 	mux.HandleFunc("PUT /ui/books/{id}", h.update)
 	mux.HandleFunc("DELETE /ui/books/{id}", h.delete)
+	mux.HandleFunc("GET /ui/search", h.search)
 	mux.HandleFunc("GET /ui/filters", h.filters)
 	mux.HandleFunc("GET /ui/lookup/{isbn}", h.lookupPreview)
 	mux.HandleFunc("POST /ui/books/isbn/{isbn}", h.addByISBN)
@@ -97,6 +98,8 @@ type booksPageData struct {
 	HasNext     bool
 	FilterField string
 	FilterValue string
+	Query       string
+	SearchField string
 }
 
 func (h *UI) buildPage(page int, filterField, filterValue string) (booksPageData, error) {
@@ -161,6 +164,44 @@ func (h *UI) books(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.render(w, "books.html", data)
+}
+
+func (h *UI) search(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q == "" {
+		h.books(w, r)
+		return
+	}
+	field := r.URL.Query().Get("field")
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	offset := (page - 1) * store.PageSize
+
+	books, err := h.store.Search(q, field, store.PageSize, offset)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	total, err := h.store.SearchCount(q, field)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	totalPages := (total + store.PageSize - 1) / store.PageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	h.render(w, "books.html", booksPageData{
+		Books:       books,
+		Page:        page,
+		TotalPages:  totalPages,
+		HasPrev:     page > 1,
+		HasNext:     page < totalPages,
+		Query:       q,
+		SearchField: field,
+	})
 }
 
 func (h *UI) filters(w http.ResponseWriter, r *http.Request) {

@@ -248,6 +248,60 @@ func (s *Books) FilterValues() (*FilterValues, error) {
 	return fv, nil
 }
 
+func ftsQuery(q string) string {
+	q = strings.ReplaceAll(q, `"`, `""`)
+	return `"` + q + `"*`
+}
+
+func (s *Books) Search(query, field string, limit, offset int) ([]*Book, error) {
+	fts := ftsQuery(query)
+	var col string
+	switch field {
+	case "title":
+		col = "title"
+	case "author":
+		col = "authors"
+	default:
+		col = "books_fts"
+	}
+	q := fmt.Sprintf(`SELECT %s FROM books WHERE id IN (
+		SELECT rowid FROM books_fts WHERE %s MATCH ?
+	) ORDER BY title LIMIT ? OFFSET ?`, selectCols, col)
+	rows, err := s.db.Query(q, fts, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var books []*Book
+	for rows.Next() {
+		b, err := scanBook(rows)
+		if err != nil {
+			return nil, err
+		}
+		books = append(books, b)
+	}
+	return books, rows.Err()
+}
+
+func (s *Books) SearchCount(query, field string) (int, error) {
+	fts := ftsQuery(query)
+	var col string
+	switch field {
+	case "title":
+		col = "title"
+	case "author":
+		col = "authors"
+	default:
+		col = "books_fts"
+	}
+	q := fmt.Sprintf(`SELECT COUNT(*) FROM books WHERE id IN (
+		SELECT rowid FROM books_fts WHERE %s MATCH ?
+	)`, col)
+	var n int
+	err := s.db.QueryRow(q, fts).Scan(&n)
+	return n, err
+}
+
 func (s *Books) Get(id int64) (*Book, error) {
 	row := s.db.QueryRow(fmt.Sprintf(`SELECT %s FROM books WHERE id = ?`, selectCols), id)
 	b, err := scanBook(row)

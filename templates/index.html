@@ -16,6 +16,22 @@
 
 <header class="header">
   <h1>Swansea Library</h1>
+  <div class="search-bar">
+    <input type="search"
+           name="q"
+           placeholder="Search books…"
+           hx-get="/ui/search"
+           hx-trigger="input changed delay:300ms, search"
+           hx-target="#book-grid"
+           hx-swap="innerHTML"
+           hx-include="[name='q'],[name='field']"
+           autocomplete="off">
+    <select name="field">
+      <option value="">All</option>
+      <option value="title">Title</option>
+      <option value="author">Author</option>
+    </select>
+  </div>
   <div class="header-actions">
     <button class="btn btn-secondary"
             @click="openScanner()">

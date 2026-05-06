@@ -50,6 +50,40 @@ body {
   gap: .75rem;
 }
 
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.search-bar input[type="search"] {
+  padding: .4rem .75rem;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.1);
+  color: var(--header-text);
+  font-size: .875rem;
+  width: 200px;
+  transition: width .2s, background .15s;
+  outline: none;
+}
+.search-bar input[type="search"]::placeholder { color: rgba(255,255,255,.45); }
+.search-bar input[type="search"]:focus {
+  background: rgba(255,255,255,.16);
+  border-color: rgba(255,255,255,.4);
+  width: 260px;
+}
+.search-bar select {
+  padding: .4rem .5rem;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.1);
+  color: var(--header-text);
+  font-size: .8rem;
+  cursor: pointer;
+  outline: none;
+}
+.search-bar select option { background: var(--header-bg); }
+
 /* Main */
 .main {
   padding: 2rem;
