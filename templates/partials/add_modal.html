@@ -1,0 +1,52 @@
+{{define "add_modal.html"}}
+<script>document.getElementById('modal-title').textContent = 'Add Book';</script>
+<form hx-post="/ui/books"
+      hx-target="#book-grid"
+      hx-swap="innerHTML">
+  <div class="form-group">
+    <label>Title *</label>
+    <input type="text" name="title" required autofocus>
+  </div>
+  <div class="form-group">
+    <label>Authors</label>
+    <textarea name="authors" rows="2" placeholder="One author per line"></textarea>
+    <p class="form-hint">One author per line</p>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>ISBN</label>
+      <input type="text" name="isbn" placeholder="978...">
+    </div>
+    <div class="form-group">
+      <label>Page count</label>
+      <input type="number" name="page_count" min="0">
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Publisher</label>
+      <input type="text" name="publisher">
+    </div>
+    <div class="form-group">
+      <label>Published date</label>
+      <input type="text" name="published_date" placeholder="2024-01-15">
+    </div>
+  </div>
+  <div class="form-group">
+    <label>Categories</label>
+    <textarea name="categories" rows="2" placeholder="One category per line"></textarea>
+  </div>
+  <div class="form-group">
+    <label>Description</label>
+    <textarea name="description" rows="3"></textarea>
+  </div>
+  <div class="form-group">
+    <label>Cover image URL</label>
+    <input type="url" name="cover_url">
+  </div>
+  <div class="form-actions">
+    <button type="button" class="btn btn-ghost" @click="closeModal()">Cancel</button>
+    <button type="submit" class="btn btn-primary">Add Book</button>
+  </div>
+</form>
+{{end}}

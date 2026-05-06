@@ -1,0 +1,35 @@
+{{define "book_card.html"}}
+<div class="book-card" id="book-{{.ID}}">
+  {{if .CoverURL}}
+    <img class="book-cover" src="{{.CoverURL}}" alt="Cover of {{.Title}}" loading="lazy">
+  {{else}}
+    <div class="book-cover-placeholder">&#128218;</div>
+  {{end}}
+  <div class="book-info">
+    <p class="book-title">{{.Title}}</p>
+    {{if .Authors}}
+      <p class="book-authors">{{join .Authors ", "}}</p>
+    {{end}}
+    <p class="book-meta">
+      {{if .Publisher}}{{.Publisher}}{{end}}
+      {{if and .Publisher .PublishedDate}} &middot; {{end}}
+      {{if .PublishedDate}}{{year .PublishedDate}}{{end}}
+    </p>
+  </div>
+  <div class="book-actions">
+    <button class="btn btn-ghost btn-sm"
+            hx-get="/ui/books/{{.ID}}/edit"
+            hx-target="#modal-body"
+            @click="openModal()">
+      Edit
+    </button>
+    <button class="btn btn-danger btn-sm"
+            hx-delete="/ui/books/{{.ID}}"
+            hx-target="#book-{{.ID}}"
+            hx-swap="outerHTML"
+            hx-confirm="Remove &ldquo;{{.Title}}&rdquo; from your library?">
+      Delete
+    </button>
+  </div>
+</div>
+{{end}}

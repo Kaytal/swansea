@@ -1,0 +1,16 @@
+{{define "books.html"}}
+{{if .}}
+<div class="book-grid">
+  {{range .}}
+    {{template "book_card.html" .}}
+  {{end}}
+</div>
+{{else}}
+<div class="book-grid">
+  <div class="empty-state">
+    <p>Your library is empty.</p>
+    <p style="font-size:.9rem">Add a book manually or scan an ISBN to get started.</p>
+  </div>
+</div>
+{{end}}
+{{end}}

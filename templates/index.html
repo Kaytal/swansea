@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Swansea Library</title>
+  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body
+  x-data="app()"
+  @close-modal.window="closeModal()"
+  @close-scanner.window="closeScanner()"
+>
+
+<header class="header">
+  <h1>Swansea Library</h1>
+  <div class="header-actions">
+    <button class="btn btn-secondary"
+            @click="openScanner()">
+      Scan ISBN
+    </button>
+    <button class="btn btn-primary"
+            hx-get="/ui/books/add"
+            hx-target="#modal-body"
+            @click="openModal()">
+      + Add Book
+    </button>
+  </div>
+</header>
+
+<main class="main">
+  <div id="book-grid"
+       hx-get="/ui/books"
+       hx-trigger="load"
+       hx-swap="innerHTML">
+    <p class="loading">Loading your library...</p>
+  </div>
+</main>
+
+<!-- Book modal (add / edit) -->
+<dialog id="modal" class="modal">
+  <div class="modal-header">
+    <h2 id="modal-title"></h2>
+    <button class="modal-close" @click="closeModal()">&#x2715;</button>
+  </div>
+  <div id="modal-body" class="modal-body"></div>
+</dialog>
+
+<!-- Scanner modal -->
+<dialog id="scanner-modal" class="modal" x-data="scanner()">
+  <div class="modal-header">
+    <h2>Add by ISBN</h2>
+    <button class="modal-close" @click="closeScanner()">&#x2715;</button>
+  </div>
+
+  <div class="scanner-tabs">
+    <button :class="tab === 'usb' && 'active'" @click="tab = 'usb'; stopCamera()">USB / Type</button>
+    <button :class="tab === 'camera' && 'active'" @click="tab = 'camera'; startCamera()">Camera</button>
+  </div>
+
+  <!-- USB / type tab -->
+  <div class="scanner-content" x-show="tab === 'usb'">
+    <p class="hint">Scan with a USB barcode scanner, or type the ISBN and press Enter.</p>
+    <div class="isbn-input-row">
+      <input
+        type="text"
+        placeholder="978..."
+        x-model="isbn"
+        @keydown.enter.prevent="lookupISBN()"
+        x-ref="usbInput"
+      >
+      <button class="btn btn-primary" @click="lookupISBN()">Look up</button>
+    </div>
+  </div>
+
+  <!-- Camera tab -->
+  <div class="scanner-content" x-show="tab === 'camera'">
+    <div class="camera-container">
+      <video x-ref="video" autoplay playsinline class="camera-feed" x-show="cameraActive"></video>
+      <div class="camera-placeholder" x-show="!cameraActive">
+        <button class="btn btn-primary" @click="startCamera()">Start Camera</button>
+      </div>
+    </div>
+    <p class="error" x-show="cameraError" x-text="cameraError"></p>
+  </div>
+
+  <!-- Lookup result (shared between tabs) -->
+  <div id="scan-result" style="padding: 0 1.5rem 1.5rem;"></div>
+</dialog>
+
+<script>
+function app() {
+  return {
+    openModal() {
+      document.getElementById('modal').showModal();
+    },
+    closeModal() {
+      document.getElementById('modal').close();
+      document.getElementById('modal-body').innerHTML = '';
+    },
+    openScanner() {
+      document.getElementById('scanner-modal').showModal();
+      this.$nextTick(() => {
+        const inp = document.querySelector('#scanner-modal input[x-ref="usbInput"]');
+        if (inp) inp.focus();
+      });
+    },
+    closeScanner() {
+      const dlg = document.getElementById('scanner-modal');
+      // stop camera if running
+      const alpine = dlg._x_dataStack && dlg._x_dataStack[0];
+      if (alpine) alpine.stopCamera();
+      dlg.close();
+      document.getElementById('scan-result').innerHTML = '';
+    }
+  };
+}
+
+function scanner() {
+  return {
+    tab: 'usb',
+    isbn: '',
+    cameraActive: false,
+    cameraError: null,
+    stream: null,
+    detector: null,
+    scanning: false,
+
+    lookupISBN() {
+      const isbn = this.isbn.trim().replace(/-/g, '');
+      if (!isbn) return;
+      htmx.ajax('GET', `/ui/lookup/${isbn}`, {
+        target: '#scan-result',
+        swap: 'innerHTML',
+      });
+    },
+
+    async startCamera() {
+      this.cameraError = null;
+      if (!('BarcodeDetector' in window)) {
+        this.cameraError = 'Barcode detection is not supported in this browser. Please use Chrome 88+ or Safari 17+.';
+        return;
+      }
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+        });
+        this.$refs.video.srcObject = this.stream;
+        this.cameraActive = true;
+        this.detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
+        this.scanning = true;
+        this.detect();
+      } catch (e) {
+        this.cameraError = 'Camera access denied: ' + e.message;
+      }
+    },
+
+    async detect() {
+      if (!this.scanning) return;
+      try {
+        const barcodes = await this.detector.detect(this.$refs.video);
+        if (barcodes.length > 0) {
+          const isbn = barcodes[0].rawValue;
+          this.stopCamera();
+          this.isbn = isbn;
+          this.tab = 'usb';
+          htmx.ajax('GET', `/ui/lookup/${isbn}`, {
+            target: '#scan-result',
+            swap: 'innerHTML',
+          });
+          return;
+        }
+      } catch (_) { /* frame not ready */ }
+      requestAnimationFrame(() => this.detect());
+    },
+
+    stopCamera() {
+      this.scanning = false;
+      this.cameraActive = false;
+      if (this.stream) {
+        this.stream.getTracks().forEach(t => t.stop());
+        this.stream = null;
+      }
+    },
+  };
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{{define "scan_preview.html"}}
+{{if .Error}}
+  <p class="error">{{.Error}}</p>
+{{else}}
+<div class="scan-preview">
+  {{if .CoverURL}}
+    <img src="{{.CoverURL}}" alt="Cover">
+  {{end}}
+  <div class="scan-preview-info">
+    <h3>{{.Title}}</h3>
+    {{if .Authors}}<p>{{join .Authors ", "}}</p>{{end}}
+    {{if .Publisher}}<p>{{.Publisher}}{{if .PublishedDate}} &middot; {{year .PublishedDate}}{{end}}</p>{{end}}
+    <div class="scan-preview-actions">
+      <button class="btn btn-primary btn-sm"
+              hx-post="/ui/books/isbn/{{.ISBN}}"
+              hx-target="#book-grid"
+              hx-swap="innerHTML">
+        Add to Library
+      </button>
+    </div>
+  </div>
+</div>
+{{end}}
+{{end}}

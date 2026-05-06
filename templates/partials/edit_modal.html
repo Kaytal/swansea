@@ -1,0 +1,52 @@
+{{define "edit_modal.html"}}
+<script>document.getElementById('modal-title').textContent = 'Edit Book';</script>
+<form hx-put="/ui/books/{{.ID}}"
+      hx-target="#book-{{.ID}}"
+      hx-swap="outerHTML">
+  <div class="form-group">
+    <label>Title *</label>
+    <input type="text" name="title" value="{{.Title}}" required autofocus>
+  </div>
+  <div class="form-group">
+    <label>Authors</label>
+    <textarea name="authors" rows="2">{{joinLines .Authors}}</textarea>
+    <p class="form-hint">One author per line</p>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>ISBN</label>
+      <input type="text" name="isbn" value="{{.ISBN}}" placeholder="978...">
+    </div>
+    <div class="form-group">
+      <label>Page count</label>
+      <input type="number" name="page_count" value="{{.PageCount}}" min="0">
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Publisher</label>
+      <input type="text" name="publisher" value="{{.Publisher}}">
+    </div>
+    <div class="form-group">
+      <label>Published date</label>
+      <input type="text" name="published_date" value="{{.PublishedDate}}" placeholder="2024-01-15">
+    </div>
+  </div>
+  <div class="form-group">
+    <label>Categories</label>
+    <textarea name="categories" rows="2">{{joinLines .Categories}}</textarea>
+  </div>
+  <div class="form-group">
+    <label>Description</label>
+    <textarea name="description" rows="3">{{.Description}}</textarea>
+  </div>
+  <div class="form-group">
+    <label>Cover image URL</label>
+    <input type="url" name="cover_url" value="{{.CoverURL}}">
+  </div>
+  <div class="form-actions">
+    <button type="button" class="btn btn-ghost" @click="closeModal()">Cancel</button>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+  </div>
+</form>
+{{end}}
