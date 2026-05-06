@@ -60,6 +60,26 @@ func migrate(db *sql.DB) error {
 		}
 	}
 
+	if version < 3 {
+		if _, err := db.Exec(`
+			INSERT OR IGNORE INTO books (isbn, title, authors, publisher, published_date, page_count, categories)
+			VALUES (
+				'9780684801223',
+				'The Old Man and the Sea',
+				'["Ernest Hemingway"]',
+				'Scribner',
+				'1952',
+				127,
+				'["Fiction","Classics"]'
+			)`,
+		); err != nil {
+			return err
+		}
+		if _, err := db.Exec(`PRAGMA user_version = 3`); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
