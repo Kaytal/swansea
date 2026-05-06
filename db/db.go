@@ -18,32 +18,49 @@ func Open(path string) (*sql.DB, error) {
 }
 
 func migrate(db *sql.DB) error {
-	_, err := db.Exec(`
-		CREATE TABLE IF NOT EXISTS books (
-			id            INTEGER PRIMARY KEY AUTOINCREMENT,
-			isbn          TEXT UNIQUE,
-			title         TEXT NOT NULL,
-			authors       TEXT,
-			publisher     TEXT,
-			published_date TEXT,
-			description   TEXT,
-			page_count    INTEGER,
-			cover_url     TEXT,
-			categories    TEXT,
-			created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
-		);
+	var version int
+	db.QueryRow(`PRAGMA user_version`).Scan(&version)
 
-		CREATE TRIGGER IF NOT EXISTS books_updated_at
-		AFTER UPDATE ON books
-		BEGIN
-			UPDATE books SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-		END;
-	`)
-	if err != nil {
-		return err
+	if version < 1 {
+		if _, err := db.Exec(`
+			CREATE TABLE IF NOT EXISTS books (
+				id            INTEGER PRIMARY KEY AUTOINCREMENT,
+				isbn          TEXT UNIQUE,
+				title         TEXT NOT NULL,
+				authors       TEXT,
+				publisher     TEXT,
+				published_date TEXT,
+				description   TEXT,
+				page_count    INTEGER,
+				cover_url     TEXT,
+				categories    TEXT,
+				created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP
+			);
+
+			CREATE TRIGGER IF NOT EXISTS books_updated_at
+			AFTER UPDATE ON books
+			BEGIN
+				UPDATE books SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+			END;
+		`); err != nil {
+			return err
+		}
+		if _, err := db.Exec(`PRAGMA user_version = 1`); err != nil {
+			return err
+		}
 	}
-	return migrateFTS(db)
+
+	if version < 2 {
+		if err := migrateFTS(db); err != nil {
+			return err
+		}
+		if _, err := db.Exec(`PRAGMA user_version = 2`); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func migrateFTS(db *sql.DB) error {
@@ -68,12 +85,15 @@ func migrateFTS(db *sql.DB) error {
 		}
 	}
 
-	// Populate index from any rows that existed before FTS was added.
+	// Backfill index from any rows that existed before FTS was added.
 	var count int
-	db.QueryRow(`SELECT COUNT(*) FROM books_fts`).Scan(&count)
-	if count == 0 {
-		_, err := db.Exec(`INSERT INTO books_fts(rowid, title, authors) SELECT id, title, authors FROM books`)
+	if err := db.QueryRow(`SELECT COUNT(*) FROM books_fts`).Scan(&count); err != nil {
 		return err
+	}
+	if count == 0 {
+		if _, err := db.Exec(`INSERT INTO books_fts(rowid, title, authors) SELECT id, title, authors FROM books`); err != nil {
+			return err
+		}
 	}
 	return nil
 }

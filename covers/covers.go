@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,6 +32,10 @@ func (s *Store) Download(remoteURL, key string) string {
 		return remoteURL
 	}
 	if strings.HasPrefix(remoteURL, "/metadata/") {
+		return remoteURL
+	}
+	if !isAllowedURL(remoteURL) {
+		log.Printf("covers: blocked URL %s", remoteURL)
 		return remoteURL
 	}
 
@@ -78,6 +84,20 @@ func (s *Store) Download(remoteURL, key string) string {
 	}
 
 	return fmt.Sprintf("/metadata/covers/%s", filename)
+}
+
+// isAllowedURL returns true only for https URLs pointing at public hosts.
+func isAllowedURL(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Scheme != "https" {
+		return false
+	}
+	host := u.Hostname()
+	ip := net.ParseIP(host)
+	if ip != nil {
+		return !ip.IsLoopback() && !ip.IsPrivate() && !ip.IsLinkLocalUnicast() && !ip.IsUnspecified()
+	}
+	return true
 }
 
 func extFromContentType(ct string) string {

@@ -116,9 +116,13 @@ func (h *Books) delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *Books) lookupISBN(w http.ResponseWriter, r *http.Request) {
 	isbn := r.PathValue("isbn")
-	result, err := lookup.ByISBN(isbn)
-	if err != nil {
+	result, err := lookup.For(r.URL.Query().Get("source"))(isbn)
+	if errors.Is(err, lookup.ErrNotFound) {
 		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
@@ -126,9 +130,13 @@ func (h *Books) lookupISBN(w http.ResponseWriter, r *http.Request) {
 
 func (h *Books) addByISBN(w http.ResponseWriter, r *http.Request) {
 	isbn := r.PathValue("isbn")
-	in, err := lookup.ByISBN(isbn)
-	if err != nil {
+	in, err := lookup.For(r.URL.Query().Get("source"))(isbn)
+	if errors.Is(err, lookup.ErrNotFound) {
 		writeError(w, http.StatusNotFound, err)
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err)
 		return
 	}
 	book, err := h.store.Create(*in)
@@ -149,6 +157,7 @@ func pathID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 }
 
 func decodeBody(w http.ResponseWriter, r *http.Request, v any) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return false

@@ -249,8 +249,13 @@ func (s *Books) FilterValues() (*FilterValues, error) {
 }
 
 func ftsQuery(q string) string {
-	q = strings.ReplaceAll(q, `"`, `""`)
-	return `"` + q + `"*`
+	words := strings.Fields(q)
+	terms := make([]string, len(words))
+	for i, w := range words {
+		w = strings.ReplaceAll(w, `"`, `""`)
+		terms[i] = `"` + w + `"*`
+	}
+	return strings.Join(terms, " AND ")
 }
 
 func (s *Books) Search(query, field string, limit, offset int) ([]*Book, error) {
@@ -336,7 +341,7 @@ func (s *Books) Create(in BookInput) (*Book, error) {
 }
 
 func (s *Books) Update(id int64, in BookInput) (*Book, error) {
-	_, err := s.db.Exec(`
+	res, err := s.db.Exec(`
 		UPDATE books SET isbn=?, title=?, authors=?, publisher=?, published_date=?,
 		description=?, page_count=?, cover_url=?, categories=?
 		WHERE id=?`,
@@ -347,7 +352,16 @@ func (s *Books) Update(id int64, in BookInput) (*Book, error) {
 	if err != nil {
 		return nil, err
 	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return nil, ErrNotFound
+	}
 	return s.Get(id)
+}
+
+func (s *Books) UpdateCoverURL(id int64, coverURL string) error {
+	_, err := s.db.Exec(`UPDATE books SET cover_url = ? WHERE id = ?`, coverURL, id)
+	return err
 }
 
 func (s *Books) Delete(id int64) error {

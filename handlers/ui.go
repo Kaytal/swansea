@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -48,7 +49,7 @@ func (h *UI) Register(mux *http.ServeMux, assets fs.FS) {
 	static, _ := fs.Sub(assets, "static")
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
 	if h.metadataPath != "" {
-		mux.Handle("GET /metadata/", http.StripPrefix("/metadata/", http.FileServer(http.Dir(h.metadataPath))))
+		mux.Handle("GET /metadata/", http.StripPrefix("/metadata/", http.FileServerFS(os.DirFS(h.metadataPath))))
 	}
 
 	mux.HandleFunc("GET /", h.index)
@@ -64,12 +65,22 @@ func (h *UI) Register(mux *http.ServeMux, assets fs.FS) {
 	mux.HandleFunc("POST /ui/books/isbn/{isbn}", h.addByISBN)
 }
 
-func (h *UI) maybeDownloadCover(in *store.BookInput, bookID int64) {
-	key := in.ISBN
-	if key == "" {
-		key = strconv.FormatInt(bookID, 10)
+// downloadCoverAsync fetches the remote cover in the background and updates the DB record.
+// The book is immediately accessible with the remote URL; the local path is applied once ready.
+func (h *UI) downloadCoverAsync(bookID int64, isbn, remoteURL string) {
+	if remoteURL == "" || strings.HasPrefix(remoteURL, "/metadata/") {
+		return
 	}
-	in.CoverURL = h.covers.Download(in.CoverURL, key)
+	go func() {
+		key := isbn
+		if key == "" {
+			key = strconv.FormatInt(bookID, 10)
+		}
+		local := h.covers.Download(remoteURL, key)
+		if local != remoteURL {
+			h.store.UpdateCoverURL(bookID, local)
+		}
+	}()
 }
 
 func (h *UI) render(w http.ResponseWriter, name string, data any) {
@@ -224,12 +235,7 @@ func (h *UI) create(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	h.maybeDownloadCover(&in, book.ID)
-	if in.CoverURL != book.CoverURL {
-		if updated, err := h.store.Update(book.ID, in); err == nil {
-			_ = updated
-		}
-	}
+	h.downloadCoverAsync(book.ID, in.ISBN, in.CoverURL)
 	data, err := h.booksPage(1)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -264,7 +270,6 @@ func (h *UI) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in := parseBookForm(r)
-	h.maybeDownloadCover(&in, id)
 	book, err := h.store.Update(id, in)
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(w, r)
@@ -274,6 +279,7 @@ func (h *UI) update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	h.downloadCoverAsync(book.ID, book.ISBN, in.CoverURL)
 	w.Header().Set("HX-Trigger", "closeModal")
 	h.render(w, "book_card.html", book)
 }
@@ -315,11 +321,12 @@ func (h *UI) addByISBN(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-	h.maybeDownloadCover(in, 0) // key will be ISBN from in.ISBN
-	if _, err := h.store.Create(*in); err != nil {
+	book, err := h.store.Create(*in)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	h.downloadCoverAsync(book.ID, in.ISBN, in.CoverURL)
 	data, err := h.booksPage(1)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

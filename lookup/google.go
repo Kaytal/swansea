@@ -2,14 +2,19 @@ package lookup
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
 
 	"swansea/store"
 )
+
+// ErrNotFound is returned when a lookup finds no results for the given ISBN.
+var ErrNotFound = errors.New("isbn not found")
 
 var httpClient = &http.Client{Timeout: 10 * time.Second}
 
@@ -50,12 +55,12 @@ func ByISBN(isbn string) (*store.BookInput, error) {
 
 func GoogleByISBN(isbn string) (*store.BookInput, error) {
 	isbn = strings.ReplaceAll(isbn, "-", "")
-	url := fmt.Sprintf("https://www.googleapis.com/books/v1/volumes?q=isbn:%s", isbn)
+	apiURL := fmt.Sprintf("https://www.googleapis.com/books/v1/volumes?q=isbn:%s", isbn)
 	if key := os.Getenv("GOOGLE_BOOKS_API_KEY"); key != "" {
-		url += "&key=" + key
+		apiURL += "&key=" + url.QueryEscape(key)
 	}
 
-	resp, err := httpClient.Get(url)
+	resp, err := httpClient.Get(apiURL)
 	if err != nil {
 		return nil, fmt.Errorf("google books request failed: %w", err)
 	}
@@ -70,7 +75,7 @@ func GoogleByISBN(isbn string) (*store.BookInput, error) {
 		return nil, fmt.Errorf("decoding google books response: %w", err)
 	}
 	if len(gr.Items) == 0 {
-		return nil, fmt.Errorf("no results found for ISBN %s", isbn)
+		return nil, fmt.Errorf("%w: %s", ErrNotFound, isbn)
 	}
 
 	vi := gr.Items[0].VolumeInfo

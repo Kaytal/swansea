@@ -53,7 +53,7 @@ func OpenLibraryByISBN(isbn string) (*store.BookInput, error) {
 
 	book, ok := olr["ISBN:"+isbn]
 	if !ok {
-		return nil, fmt.Errorf("no results found for ISBN %s", isbn)
+		return nil, fmt.Errorf("%w: %s", ErrNotFound, isbn)
 	}
 
 	resolvedISBN := isbn
