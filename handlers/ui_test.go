@@ -1,7 +1,6 @@
 package handlers_test
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -9,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -347,5 +347,5 @@ func TestUI_delete_book(t *testing.T) {
 }
 
 func itoa(id int64) string {
-	return url.PathEscape(strings.TrimSpace(strings.ReplaceAll(fmt.Sprintf("%d", id), " ", "")))
+	return strconv.FormatInt(id, 10)
 }

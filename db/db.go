@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
 	_ "modernc.org/sqlite"
 )
 
@@ -19,7 +20,9 @@ func Open(path string) (*sql.DB, error) {
 
 func migrate(db *sql.DB) error {
 	var version int
-	db.QueryRow(`PRAGMA user_version`).Scan(&version)
+	if err := db.QueryRow(`PRAGMA user_version`).Scan(&version); err != nil {
+		return fmt.Errorf("reading user_version: %w", err)
+	}
 
 	if version < 1 {
 		if _, err := db.Exec(`

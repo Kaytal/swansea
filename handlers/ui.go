@@ -5,6 +5,7 @@ import (
 	"errors"
 	"html/template"
 	"io/fs"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -83,7 +84,9 @@ func (h *UI) downloadCoverAsync(bookID int64, isbn, remoteURL string) {
 		}
 		local := h.covers.Download(remoteURL, key)
 		if local != remoteURL {
-			h.store.UpdateCoverURL(bookID, local)
+			if err := h.store.UpdateCoverURL(bookID, local); err != nil {
+				log.Printf("covers: update cover URL for book %d: %v", bookID, err)
+			}
 		}
 	}()
 }
@@ -207,6 +210,12 @@ func (h *UI) search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	field := r.URL.Query().Get("field")
+	switch field {
+	case "title", "author":
+		// valid
+	default:
+		field = ""
+	}
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	if page < 1 {
 		page = 1
@@ -252,7 +261,11 @@ func (h *UI) addForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UI) create(w http.ResponseWriter, r *http.Request) {
-	in := parseBookForm(r)
+	in := parseBookForm(w, r)
+	if in.Title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
 	book, err := h.store.Create(in)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -292,7 +305,11 @@ func (h *UI) update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	in := parseBookForm(r)
+	in := parseBookForm(w, r)
+	if in.Title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
 	book, err := h.store.Update(id, in)
 	if errors.Is(err, store.ErrNotFound) {
 		http.NotFound(w, r)
@@ -340,8 +357,12 @@ func (h *UI) lookupPreview(w http.ResponseWriter, r *http.Request) {
 func (h *UI) addByISBN(w http.ResponseWriter, r *http.Request) {
 	isbn := r.PathValue("isbn")
 	in, err := lookup.For(r.URL.Query().Get("source"))(isbn)
-	if err != nil {
+	if errors.Is(err, lookup.ErrNotFound) {
 		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
 	book, err := h.store.Create(*in)
@@ -359,7 +380,8 @@ func (h *UI) addByISBN(w http.ResponseWriter, r *http.Request) {
 	h.render(w, "books.html", data)
 }
 
-func parseBookForm(r *http.Request) store.BookInput {
+func parseBookForm(w http.ResponseWriter, r *http.Request) store.BookInput {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	r.ParseForm()
 	pageCount, _ := strconv.Atoi(r.FormValue("page_count"))
 	return store.BookInput{
