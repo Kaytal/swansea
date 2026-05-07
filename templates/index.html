@@ -10,6 +10,8 @@
   <script defer src="https://unpkg.com/alpinejs@3.14.8/dist/cdn.min.js"
           integrity="sha384-X9kJyAubVxnP0hcA+AMMs21U445qsnqhnUF8EBlEpP3a42Kh/JwWjlv2ZcvGfphb"
           crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/zxing-wasm@1.3.3/dist/iife/reader/index.js"
+          crossorigin="anonymous"></script>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body
@@ -181,7 +183,6 @@ function scanner() {
     cameraActive: false,
     cameraError: null,
     stream: null,
-    detector: null,
     scanning: false,
 
     lookupISBN() {
@@ -196,8 +197,8 @@ function scanner() {
 
     async startCamera() {
       this.cameraError = null;
-      if (!('BarcodeDetector' in window)) {
-        this.cameraError = 'Barcode detection is not supported in this browser. Please use Chrome 88+ or Safari 17+.';
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        this.cameraError = 'Camera access is not supported in this browser.';
         return;
       }
       try {
@@ -206,7 +207,6 @@ function scanner() {
         });
         this.$refs.video.srcObject = this.stream;
         this.cameraActive = true;
-        this.detector = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] });
         this.scanning = true;
         this.detect();
       } catch (e) {
@@ -216,21 +216,31 @@ function scanner() {
 
     async detect() {
       if (!this.scanning) return;
-      try {
-        const barcodes = await this.detector.detect(this.$refs.video);
-        if (barcodes.length > 0) {
-          const isbn = barcodes[0].rawValue;
-          this.stopCamera();
-          this.isbn = isbn;
-          this.tab = 'usb';
-          this.loading = true;
-          htmx.ajax('GET', `/ui/lookup/${isbn}?source=${this.source}`, {
-            target: '#scan-result',
-            swap: 'innerHTML',
-          }).then(() => { this.loading = false; });
-          return;
-        }
-      } catch (_) { /* frame not ready */ }
+      const video = this.$refs.video;
+      if (video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0) {
+        try {
+          const canvas = new OffscreenCanvas(video.videoWidth, video.videoHeight);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const results = await ZXingWASM.readBarcodes(imageData, {
+            formats: ['EAN-13', 'EAN-8', 'UPC-A', 'UPC-E', 'DataMatrix', 'QRCode'],
+            maxNumberOfSymbols: 1,
+          });
+          if (results.length > 0) {
+            const isbn = results[0].text;
+            this.stopCamera();
+            this.isbn = isbn;
+            this.tab = 'usb';
+            this.loading = true;
+            htmx.ajax('GET', `/ui/lookup/${isbn}?source=${this.source}`, {
+              target: '#scan-result',
+              swap: 'innerHTML',
+            }).then(() => { this.loading = false; });
+            return;
+          }
+        } catch (_) { /* frame not ready */ }
+      }
       requestAnimationFrame(() => this.detect());
     },
 
