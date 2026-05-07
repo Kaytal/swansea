@@ -36,7 +36,7 @@ func OpenLibraryByISBN(isbn string) (*store.BookInput, error) {
 	isbn = strings.ReplaceAll(isbn, "-", "")
 	url := fmt.Sprintf("https://openlibrary.org/api/books?bibkeys=ISBN:%s&format=json&jscmd=data", isbn)
 
-	resp, err := httpClient.Get(url)
+	resp, err := HTTPClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("open library request failed: %w", err)
 	}

@@ -327,11 +327,20 @@ func (s *Books) GetByISBN(isbn string) (*Book, error) {
 	return b, err
 }
 
+// nullISBN converts an empty ISBN to nil so it is stored as NULL.
+// The UNIQUE constraint on isbn allows multiple NULLs but rejects duplicate empty strings.
+func nullISBN(isbn string) any {
+	if isbn == "" {
+		return nil
+	}
+	return isbn
+}
+
 func (s *Books) Create(in BookInput) (*Book, error) {
 	res, err := s.db.Exec(`
 		INSERT INTO books (isbn, title, authors, publisher, published_date, description, page_count, cover_url, categories)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		in.ISBN, in.Title, marshalStrings(in.Authors), in.Publisher,
+		nullISBN(in.ISBN), in.Title, marshalStrings(in.Authors), in.Publisher,
 		in.PublishedDate, in.Description, in.PageCount, in.CoverURL,
 		marshalStrings(in.Categories),
 	)
@@ -347,7 +356,7 @@ func (s *Books) Update(id int64, in BookInput) (*Book, error) {
 		UPDATE books SET isbn=?, title=?, authors=?, publisher=?, published_date=?,
 		description=?, page_count=?, cover_url=?, categories=?
 		WHERE id=?`,
-		in.ISBN, in.Title, marshalStrings(in.Authors), in.Publisher,
+		nullISBN(in.ISBN), in.Title, marshalStrings(in.Authors), in.Publisher,
 		in.PublishedDate, in.Description, in.PageCount, in.CoverURL,
 		marshalStrings(in.Categories), id,
 	)

@@ -16,7 +16,8 @@ import (
 // ErrNotFound is returned when a lookup finds no results for the given ISBN.
 var ErrNotFound = errors.New("isbn not found")
 
-var httpClient = &http.Client{Timeout: 10 * time.Second}
+// HTTPClient is used for all outbound lookup requests. Override in tests.
+var HTTPClient = &http.Client{Timeout: 10 * time.Second}
 
 type googleResponse struct {
 	Items []struct {
@@ -60,7 +61,7 @@ func GoogleByISBN(isbn string) (*store.BookInput, error) {
 		apiURL += "&key=" + url.QueryEscape(key)
 	}
 
-	resp, err := httpClient.Get(apiURL)
+	resp, err := HTTPClient.Get(apiURL)
 	if err != nil {
 		return nil, fmt.Errorf("google books request failed: %w", err)
 	}
