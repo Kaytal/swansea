@@ -83,6 +83,18 @@ func migrate(db *sql.DB) error {
 		}
 	}
 
+	if version < 4 {
+		// Rebuild FTS index — the original backfill check used COUNT(*) which on a
+		// content='books' FTS5 table reads from the books table (not the index),
+		// so it was always non-zero and the backfill never ran.
+		if _, err := db.Exec(`INSERT INTO books_fts(books_fts) VALUES('rebuild')`); err != nil {
+			return err
+		}
+		if _, err := db.Exec(`PRAGMA user_version = 4`); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -109,14 +121,10 @@ func migrateFTS(db *sql.DB) error {
 	}
 
 	// Backfill index from any rows that existed before FTS was added.
-	var count int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM books_fts`).Scan(&count); err != nil {
+	// Note: COUNT(*) on a content='books' FTS5 table reads from the content table,
+	// not the index, so we use rebuild instead of a count guard.
+	if _, err := db.Exec(`INSERT INTO books_fts(books_fts) VALUES('rebuild')`); err != nil {
 		return err
-	}
-	if count == 0 {
-		if _, err := db.Exec(`INSERT INTO books_fts(rowid, title, authors) SELECT id, title, authors FROM books`); err != nil {
-			return err
-		}
 	}
 	return nil
 }
