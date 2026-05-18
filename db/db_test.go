@@ -18,8 +18,8 @@ func TestOpen_creates_schema_and_migrates(t *testing.T) {
 	if err := database.QueryRow(`PRAGMA user_version`).Scan(&version); err != nil {
 		t.Fatalf("PRAGMA user_version: %v", err)
 	}
-	if version != 4 {
-		t.Errorf("user_version = %d, want 4", version)
+	if version != 7 {
+		t.Errorf("user_version = %d, want 7", version)
 	}
 }
 
