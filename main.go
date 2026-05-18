@@ -48,9 +48,15 @@ func main() {
 	})
 
 	bookStore := store.NewBooks(database)
+	gameStore := store.NewVideoGames(database)
+	movieStore := store.NewMovies(database)
+	musicStore := store.NewMusicAlbums(database)
 
 	// JSON API
 	handlers.NewBooks(bookStore).Register(mux)
+	handlers.NewGames(gameStore).Register(mux)
+	handlers.NewMovies(movieStore).Register(mux)
+	handlers.NewMusic(musicStore).Register(mux)
 
 	// HTML UI
 	cv := covers.New(filepath.Join(metadataPath, "covers"))
