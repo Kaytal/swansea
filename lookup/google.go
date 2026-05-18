@@ -54,6 +54,66 @@ func ByISBN(isbn string) (*store.BookInput, error) {
 	return GoogleByISBN(isbn)
 }
 
+// GoogleSearchByTitle searches Google Books by title and returns up to 8 matches.
+func GoogleSearchByTitle(query string) ([]*store.BookInput, error) {
+	apiURL := fmt.Sprintf("https://www.googleapis.com/books/v1/volumes?q=%s&maxResults=8", url.QueryEscape(query))
+	if key := os.Getenv("GOOGLE_BOOKS_API_KEY"); key != "" {
+		apiURL += "&key=" + url.QueryEscape(key)
+	}
+
+	resp, err := HTTPClient.Get(apiURL)
+	if err != nil {
+		return nil, fmt.Errorf("google books request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("google books returned %d", resp.StatusCode)
+	}
+
+	var gr googleResponse
+	if err := json.NewDecoder(resp.Body).Decode(&gr); err != nil {
+		return nil, fmt.Errorf("decoding google books response: %w", err)
+	}
+
+	results := make([]*store.BookInput, 0, len(gr.Items))
+	for _, item := range gr.Items {
+		vi := item.VolumeInfo
+
+		isbn := ""
+		for _, id := range vi.IndustryIdentifiers {
+			if id.Type == "ISBN_13" {
+				isbn = id.Identifier
+				break
+			}
+		}
+		if isbn == "" {
+			for _, id := range vi.IndustryIdentifiers {
+				if id.Type == "ISBN_10" {
+					isbn = id.Identifier
+					break
+				}
+			}
+		}
+
+		cover := strings.Replace(vi.ImageLinks.Thumbnail, "http://", "https://", 1)
+
+		results = append(results, &store.BookInput{
+			ISBN:          isbn,
+			Title:         vi.Title,
+			Authors:       vi.Authors,
+			Publisher:     vi.Publisher,
+			PublishedDate: vi.PublishedDate,
+			Description:   vi.Description,
+			PageCount:     vi.PageCount,
+			CoverURL:      cover,
+			Categories:    vi.Categories,
+		})
+	}
+
+	return results, nil
+}
+
 func GoogleByISBN(isbn string) (*store.BookInput, error) {
 	isbn = strings.ReplaceAll(isbn, "-", "")
 	apiURL := fmt.Sprintf("https://www.googleapis.com/books/v1/volumes?q=isbn:%s", isbn)

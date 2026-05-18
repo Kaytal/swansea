@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,7 @@ import (
 
 	"swansea/db"
 	"swansea/handlers"
+	"swansea/lookup"
 	"swansea/store"
 )
 
@@ -348,4 +350,129 @@ func TestUI_delete_book(t *testing.T) {
 
 func itoa(id int64) string {
 	return strconv.FormatInt(id, 10)
+}
+
+// stubLookupClient replaces lookup.HTTPClient for the duration of the test.
+func stubLookupClient(t *testing.T, resp map[string]any) {
+	t.Helper()
+	orig := lookup.HTTPClient
+	b, err := json.Marshal(resp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lookup.HTTPClient = &http.Client{
+		Transport: roundTripFn(func(*http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: 200,
+				Body:       io.NopCloser(strings.NewReader(string(b))),
+				Header:     make(http.Header),
+			}, nil
+		}),
+	}
+	t.Cleanup(func() { lookup.HTTPClient = orig })
+}
+
+type roundTripFn func(*http.Request) (*http.Response, error)
+
+func (f roundTripFn) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+// --- Lookup search ---
+
+func TestUI_lookupSearch_empty_query(t *testing.T) {
+	srv, _ := newUIServer(t)
+	resp, err := http.Get(srv.URL + "/ui/books/lookup-search")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := getText(t, resp)
+	if resp.StatusCode != 200 {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if strings.TrimSpace(body) != "" {
+		t.Errorf("empty query should return empty body, got %q", body)
+	}
+}
+
+func TestUI_lookupSearch_with_results(t *testing.T) {
+	stubLookupClient(t, map[string]any{
+		"items": []any{
+			map[string]any{
+				"volumeInfo": map[string]any{
+					"title":         "1984",
+					"authors":       []string{"George Orwell"},
+					"publishedDate": "1949",
+					"industryIdentifiers": []any{
+						map[string]any{"type": "ISBN_13", "identifier": "9780141036144"},
+					},
+				},
+			},
+		},
+	})
+
+	srv, _ := newUIServer(t)
+	resp, err := http.Get(srv.URL + "/ui/books/lookup-search?q=1984")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := getText(t, resp)
+	if resp.StatusCode != 200 {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if !strings.Contains(body, "1984") {
+		t.Error("response should contain book title")
+	}
+	if !strings.Contains(body, "George Orwell") {
+		t.Error("response should contain author")
+	}
+	if !strings.Contains(body, "1949") {
+		t.Error("response should contain year")
+	}
+	if !strings.Contains(body, "fillBookForm") {
+		t.Error("each result should have fillBookForm onclick")
+	}
+	if !strings.Contains(body, `data-isbn="9780141036144"`) {
+		t.Error("result should carry ISBN in data attribute")
+	}
+}
+
+func TestUI_lookupSearch_no_results(t *testing.T) {
+	stubLookupClient(t, map[string]any{
+		"items": []any{},
+	})
+
+	srv, _ := newUIServer(t)
+	resp, err := http.Get(srv.URL + "/ui/books/lookup-search?q=xyzzy")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := getText(t, resp)
+	if resp.StatusCode != 200 {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if !strings.Contains(body, "No results") {
+		t.Errorf("empty results should show no-results message, got %q", body)
+	}
+}
+
+func TestUI_lookupSearch_multiple_results(t *testing.T) {
+	stubLookupClient(t, map[string]any{
+		"items": []any{
+			map[string]any{"volumeInfo": map[string]any{"title": "Dune"}},
+			map[string]any{"volumeInfo": map[string]any{"title": "Dune Messiah"}},
+			map[string]any{"volumeInfo": map[string]any{"title": "Children of Dune"}},
+		},
+	})
+
+	srv, _ := newUIServer(t)
+	resp, err := http.Get(srv.URL + "/ui/books/lookup-search?q=dune")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := getText(t, resp)
+	if !strings.Contains(body, "Dune Messiah") {
+		t.Error("response should contain second result")
+	}
+	if !strings.Contains(body, "Children of Dune") {
+		t.Error("response should contain third result")
+	}
 }

@@ -1,0 +1,27 @@
+{{define "book_lookup_results.html"}}
+{{if .}}
+<ul class="lookup-results">
+  {{range .}}
+  <li class="lookup-result"
+      data-title="{{.Title}}"
+      data-authors="{{joinLines .Authors}}"
+      data-isbn="{{.ISBN}}"
+      data-publisher="{{.Publisher}}"
+      data-published-date="{{.PublishedDate}}"
+      data-page-count="{{.PageCount}}"
+      data-description="{{.Description}}"
+      data-cover-url="{{.CoverURL}}"
+      data-categories="{{joinLines .Categories}}"
+      onclick="fillBookForm(this)">
+    {{if .CoverURL}}<img src="{{.CoverURL}}" alt="" class="lookup-result-cover">{{end}}
+    <div class="lookup-result-info">
+      <span class="lookup-result-title">{{.Title}}</span>
+      {{if .Authors}}<span class="lookup-result-meta">{{join .Authors ", "}}{{if .PublishedDate}} &middot; {{year .PublishedDate}}{{end}}</span>{{else if .PublishedDate}}<span class="lookup-result-meta">{{year .PublishedDate}}</span>{{end}}
+    </div>
+  </li>
+  {{end}}
+</ul>
+{{else}}
+<p class="lookup-no-results">No results, try modifying your search.</p>
+{{end}}
+{{end}}

@@ -67,6 +67,7 @@ func (h *UI) Register(mux *http.ServeMux, assets fs.FS) {
 	mux.HandleFunc("DELETE /ui/books/{id}", h.delete)
 	mux.HandleFunc("GET /ui/search", h.search)
 	mux.HandleFunc("GET /ui/filters", h.filters)
+	mux.HandleFunc("GET /ui/books/lookup-search", h.lookupSearch)
 	mux.HandleFunc("GET /ui/lookup/{isbn}", h.lookupPreview)
 	mux.HandleFunc("POST /ui/books/isbn/{isbn}", h.addByISBN)
 }
@@ -378,6 +379,20 @@ func (h *UI) addByISBN(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("HX-Trigger", "closeScanner")
 	h.render(w, "books.html", data)
+}
+
+func (h *UI) lookupSearch(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q == "" {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		return
+	}
+	results, err := lookup.GoogleSearchByTitle(q)
+	if err != nil || len(results) == 0 {
+		h.render(w, "book_lookup_results.html", []*store.BookInput{})
+		return
+	}
+	h.render(w, "book_lookup_results.html", results)
 }
 
 func parseBookForm(w http.ResponseWriter, r *http.Request) store.BookInput {

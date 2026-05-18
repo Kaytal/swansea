@@ -289,3 +289,165 @@ func TestOpenLibraryByISBN_http_error(t *testing.T) {
 		t.Fatal("expected error for 503, got nil")
 	}
 }
+
+// --- GoogleSearchByTitle ---
+
+var fakeSearchResponse = map[string]any{
+	"items": []any{
+		map[string]any{
+			"volumeInfo": map[string]any{
+				"title":         "1984",
+				"authors":       []string{"George Orwell"},
+				"publisher":     "Secker & Warburg",
+				"publishedDate": "1949",
+				"description":   "Dystopian novel",
+				"pageCount":     328,
+				"categories":    []string{"Fiction"},
+				"imageLinks":    map[string]any{"thumbnail": "https://books.google.com/covers/1984.jpg"},
+				"industryIdentifiers": []any{
+					map[string]any{"type": "ISBN_13", "identifier": "9780141036144"},
+				},
+			},
+		},
+		map[string]any{
+			"volumeInfo": map[string]any{
+				"title":   "Nineteen Eighty-Four (Annotated)",
+				"authors": []string{"George Orwell"},
+				"industryIdentifiers": []any{
+					map[string]any{"type": "ISBN_10", "identifier": "0451524934"},
+				},
+			},
+		},
+	},
+}
+
+func TestGoogleSearchByTitle_success(t *testing.T) {
+	setClient(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: 200, Body: fakeJSON(t, fakeSearchResponse), Header: make(http.Header)}, nil
+	}))
+
+	results, err := GoogleSearchByTitle("1984")
+	if err != nil {
+		t.Fatalf("GoogleSearchByTitle: %v", err)
+	}
+	if len(results) != 2 {
+		t.Fatalf("len(results) = %d, want 2", len(results))
+	}
+	if results[0].Title != "1984" {
+		t.Errorf("results[0].Title = %q, want 1984", results[0].Title)
+	}
+	if results[0].ISBN != "9780141036144" {
+		t.Errorf("results[0].ISBN = %q, want ISBN_13", results[0].ISBN)
+	}
+	if len(results[0].Authors) != 1 || results[0].Authors[0] != "George Orwell" {
+		t.Errorf("results[0].Authors = %v", results[0].Authors)
+	}
+	if results[0].PageCount != 328 {
+		t.Errorf("results[0].PageCount = %d, want 328", results[0].PageCount)
+	}
+}
+
+func TestGoogleSearchByTitle_isbn10_fallback(t *testing.T) {
+	resp := map[string]any{
+		"items": []any{
+			map[string]any{
+				"volumeInfo": map[string]any{
+					"title": "Some Book",
+					"industryIdentifiers": []any{
+						map[string]any{"type": "ISBN_10", "identifier": "0451524934"},
+					},
+				},
+			},
+		},
+	}
+	setClient(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: 200, Body: fakeJSON(t, resp), Header: make(http.Header)}, nil
+	}))
+
+	results, err := GoogleSearchByTitle("Some Book")
+	if err != nil {
+		t.Fatalf("GoogleSearchByTitle: %v", err)
+	}
+	if len(results) == 0 {
+		t.Fatal("expected at least one result")
+	}
+	if results[0].ISBN != "0451524934" {
+		t.Errorf("ISBN = %q, want ISBN_10 fallback", results[0].ISBN)
+	}
+}
+
+func TestGoogleSearchByTitle_empty_results(t *testing.T) {
+	setClient(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       fakeJSON(t, map[string]any{"items": []any{}}),
+			Header:     make(http.Header),
+		}, nil
+	}))
+
+	results, err := GoogleSearchByTitle("xyzzy unmatched query")
+	if err != nil {
+		t.Fatalf("GoogleSearchByTitle: %v", err)
+	}
+	if len(results) != 0 {
+		t.Errorf("expected empty results, got %d", len(results))
+	}
+}
+
+func TestGoogleSearchByTitle_url_uses_query_not_isbn_prefix(t *testing.T) {
+	var gotURL string
+	setClient(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		gotURL = r.URL.String()
+		return &http.Response{StatusCode: 200, Body: fakeJSON(t, map[string]any{}), Header: make(http.Header)}, nil
+	}))
+
+	GoogleSearchByTitle("the hobbit")
+	if strings.Contains(gotURL, "isbn:") {
+		t.Errorf("search URL should not contain 'isbn:', got %q", gotURL)
+	}
+	if !strings.Contains(gotURL, "hobbit") {
+		t.Errorf("search URL should contain query term, got %q", gotURL)
+	}
+}
+
+func TestGoogleSearchByTitle_http_error(t *testing.T) {
+	setClient(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: 429,
+			Body:       io.NopCloser(strings.NewReader(`{"error":"rate limited"}`)),
+			Header:     make(http.Header),
+		}, nil
+	}))
+
+	_, err := GoogleSearchByTitle("1984")
+	if err == nil {
+		t.Fatal("expected error for 429, got nil")
+	}
+}
+
+func TestGoogleSearchByTitle_upgrades_http_cover(t *testing.T) {
+	resp := map[string]any{
+		"items": []any{
+			map[string]any{
+				"volumeInfo": map[string]any{
+					"title":      "Book",
+					"imageLinks": map[string]any{"thumbnail": "http://books.google.com/cover.jpg"},
+				},
+			},
+		},
+	}
+	setClient(t, roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: 200, Body: fakeJSON(t, resp), Header: make(http.Header)}, nil
+	}))
+
+	results, err := GoogleSearchByTitle("Book")
+	if err != nil {
+		t.Fatalf("GoogleSearchByTitle: %v", err)
+	}
+	if len(results) == 0 {
+		t.Fatal("expected a result")
+	}
+	if !strings.HasPrefix(results[0].CoverURL, "https://") {
+		t.Errorf("CoverURL should be upgraded to https, got %q", results[0].CoverURL)
+	}
+}

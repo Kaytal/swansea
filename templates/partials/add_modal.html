@@ -1,11 +1,25 @@
 {{define "add_modal.html"}}
 <script>document.getElementById('modal-title').textContent = 'Add Book';</script>
+
+<div class="lookup-search">
+  <input id="lookup-search-input"
+         type="search"
+         name="q"
+         placeholder="Search by title to pre-fill..."
+         hx-get="/ui/books/lookup-search"
+         hx-trigger="input changed delay:400ms"
+         hx-target="#lookup-results"
+         hx-swap="innerHTML"
+         autocomplete="off">
+  <div id="lookup-results" class="lookup-results-container"></div>
+</div>
+
 <form hx-post="/ui/books"
       hx-target="#book-grid"
       hx-swap="innerHTML">
   <div class="form-group">
     <label>Title *</label>
-    <input type="text" name="title" required autofocus>
+    <input type="text" name="title" required>
   </div>
   <div class="form-group">
     <label>Authors</label>
@@ -49,4 +63,21 @@
     <button type="submit" class="btn btn-primary">Add Book</button>
   </div>
 </form>
+
+<script>
+function fillBookForm(el) {
+  const d = el.dataset;
+  document.querySelector('[name="title"]').value = d.title || '';
+  document.querySelector('[name="authors"]').value = d.authors || '';
+  document.querySelector('[name="isbn"]').value = d.isbn || '';
+  document.querySelector('[name="publisher"]').value = d.publisher || '';
+  document.querySelector('[name="published_date"]').value = d.publishedDate || '';
+  document.querySelector('[name="page_count"]').value = d.pageCount || '';
+  document.querySelector('[name="description"]').value = d.description || '';
+  document.querySelector('[name="cover_url"]').value = d.coverUrl || '';
+  document.querySelector('[name="categories"]').value = d.categories || '';
+  document.getElementById('lookup-results').innerHTML = '';
+  document.getElementById('lookup-search-input').value = '';
+}
+</script>
 {{end}}
