@@ -239,7 +239,7 @@ func TestListPage(t *testing.T) {
 		bs.Create(store.BookInput{Title: titles[i%len(titles)] + string(rune('A'+i))})
 	}
 
-	page1, err := bs.ListPage(store.PageSize, 0)
+	page1, err := bs.ListPage(store.PageSize, 0, "title", "asc")
 	if err != nil {
 		t.Fatalf("ListPage p1: %v", err)
 	}
@@ -247,7 +247,7 @@ func TestListPage(t *testing.T) {
 		t.Errorf("page1 len = %d, want %d", len(page1), store.PageSize)
 	}
 
-	page2, err := bs.ListPage(store.PageSize, store.PageSize)
+	page2, err := bs.ListPage(store.PageSize, store.PageSize, "title", "asc")
 	if err != nil {
 		t.Fatalf("ListPage p2: %v", err)
 	}
@@ -288,7 +288,7 @@ func seedFilterBooks(t *testing.T) *store.Books {
 
 func TestListFiltered_category(t *testing.T) {
 	bs := seedFilterBooks(t)
-	books, err := bs.ListFiltered("category", "Fantasy", 10, 0)
+	books, err := bs.ListFiltered("category", "Fantasy", 10, 0, "title", "asc")
 	if err != nil {
 		t.Fatalf("ListFiltered category: %v", err)
 	}
@@ -299,7 +299,7 @@ func TestListFiltered_category(t *testing.T) {
 
 func TestListFiltered_author(t *testing.T) {
 	bs := seedFilterBooks(t)
-	books, err := bs.ListFiltered("author", "Tolkien", 10, 0)
+	books, err := bs.ListFiltered("author", "Tolkien", 10, 0, "title", "asc")
 	if err != nil {
 		t.Fatalf("ListFiltered author: %v", err)
 	}
@@ -310,7 +310,7 @@ func TestListFiltered_author(t *testing.T) {
 
 func TestListFiltered_year(t *testing.T) {
 	bs := seedFilterBooks(t)
-	books, err := bs.ListFiltered("year", "1954", 10, 0)
+	books, err := bs.ListFiltered("year", "1954", 10, 0, "title", "asc")
 	if err != nil {
 		t.Fatalf("ListFiltered year: %v", err)
 	}
@@ -321,7 +321,7 @@ func TestListFiltered_year(t *testing.T) {
 
 func TestListFiltered_unknown_falls_back_to_all(t *testing.T) {
 	bs := seedFilterBooks(t)
-	books, err := bs.ListFiltered("unknown", "x", 10, 0)
+	books, err := bs.ListFiltered("unknown", "x", 10, 0, "title", "asc")
 	if err != nil {
 		t.Fatalf("ListFiltered unknown: %v", err)
 	}
@@ -332,7 +332,7 @@ func TestListFiltered_unknown_falls_back_to_all(t *testing.T) {
 
 func TestListFiltered_case_insensitive(t *testing.T) {
 	bs := seedFilterBooks(t)
-	books, err := bs.ListFiltered("category", "fiction", 10, 0)
+	books, err := bs.ListFiltered("category", "fiction", 10, 0, "title", "asc")
 	if err != nil {
 		t.Fatalf("ListFiltered lowercase: %v", err)
 	}

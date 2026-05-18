@@ -1,4 +1,24 @@
 {{define "books.html"}}
+<div class="book-list-header" aria-hidden="true">
+  <div class="book-info">
+    <button class="list-sort-btn col-title{{if eq .SortBy "title"}} sort-active{{end}}"
+            hx-get="{{.SortTitle}}" hx-target="#book-grid" hx-swap="innerHTML">
+      Title{{if eq .SortBy "title"}} {{if eq .SortDir "asc"}}&uarr;{{else}}&darr;{{end}}{{end}}
+    </button>
+    <button class="list-sort-btn col-author{{if eq .SortBy "author"}} sort-active{{end}}"
+            hx-get="{{.SortAuthor}}" hx-target="#book-grid" hx-swap="innerHTML">
+      Author{{if eq .SortBy "author"}} {{if eq .SortDir "asc"}}&uarr;{{else}}&darr;{{end}}{{end}}
+    </button>
+    <button class="list-sort-btn col-meta{{if eq .SortBy "year"}} sort-active{{end}}"
+            hx-get="{{.SortYear}}" hx-target="#book-grid" hx-swap="innerHTML">
+      Publisher / Year{{if eq .SortBy "year"}} {{if eq .SortDir "asc"}}&uarr;{{else}}&darr;{{end}}{{end}}
+    </button>
+  </div>
+  <div class="book-actions" style="visibility:hidden">
+    <button class="btn btn-ghost btn-sm" tabindex="-1">Edit</button>
+    <button class="btn btn-danger btn-sm" tabindex="-1">Delete</button>
+  </div>
+</div>
 {{if .Books}}
 <div class="book-grid">
   {{range .Books}}

@@ -133,11 +133,22 @@ type booksPageData struct {
 	RouteBase   string
 	Query       string
 	SearchField string
+	SortBy      string
+	SortDir     string
+	SortTitle   string
+	SortAuthor  string
+	SortYear    string
 }
 
-func (h *UI) buildPage(page int, filterField, filterValue string) (booksPageData, error) {
+func (h *UI) buildPage(page int, filterField, filterValue, sortCol, sortDir string) (booksPageData, error) {
 	if page < 1 {
 		page = 1
+	}
+	if sortCol == "" {
+		sortCol = "title"
+	}
+	if sortDir == "" {
+		sortDir = "asc"
 	}
 	offset := (page - 1) * store.PageSize
 
@@ -146,13 +157,13 @@ func (h *UI) buildPage(page int, filterField, filterValue string) (booksPageData
 	var err error
 
 	if filterField != "" && filterValue != "" {
-		books, err = h.store.ListFiltered(filterField, filterValue, store.PageSize, offset)
+		books, err = h.store.ListFiltered(filterField, filterValue, store.PageSize, offset, sortCol, sortDir)
 		if err != nil {
 			return booksPageData{}, err
 		}
 		total, err = h.store.CountFiltered(filterField, filterValue)
 	} else {
-		books, err = h.store.ListPage(store.PageSize, offset)
+		books, err = h.store.ListPage(store.PageSize, offset, sortCol, sortDir)
 		if err != nil {
 			return booksPageData{}, err
 		}
@@ -167,9 +178,20 @@ func (h *UI) buildPage(page int, filterField, filterValue string) (booksPageData
 		totalPages = 1
 	}
 	routeBase := ""
+	filterParam := ""
 	if filterField != "" && filterValue != "" {
 		routeBase = "/" + filterField + "/" + url.PathEscape(filterValue)
+		filterParam = "&" + filterField + "=" + url.QueryEscape(filterValue)
 	}
+
+	sortURL := func(col string) string {
+		dir := "asc"
+		if col == sortCol && sortDir == "asc" {
+			dir = "desc"
+		}
+		return "/ui/books?sort=" + col + "&dir=" + dir + filterParam
+	}
+
 	return booksPageData{
 		Books:       books,
 		Page:        page,
@@ -179,15 +201,22 @@ func (h *UI) buildPage(page int, filterField, filterValue string) (booksPageData
 		FilterField: filterField,
 		FilterValue: filterValue,
 		RouteBase:   routeBase,
+		SortBy:      sortCol,
+		SortDir:     sortDir,
+		SortTitle:   sortURL("title"),
+		SortAuthor:  sortURL("author"),
+		SortYear:    sortURL("year"),
 	}, nil
 }
 
 func (h *UI) booksPage(page int) (booksPageData, error) {
-	return h.buildPage(page, "", "")
+	return h.buildPage(page, "", "", "title", "asc")
 }
 
 func (h *UI) books(w http.ResponseWriter, r *http.Request) {
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	sortCol := r.URL.Query().Get("sort")
+	sortDir := r.URL.Query().Get("dir")
 	var filterField, filterValue string
 	for _, f := range []string{"category", "author", "year"} {
 		if v := r.URL.Query().Get(f); v != "" {
@@ -196,7 +225,7 @@ func (h *UI) books(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	data, err := h.buildPage(page, filterField, filterValue)
+	data, err := h.buildPage(page, filterField, filterValue, sortCol, sortDir)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -318,7 +318,7 @@ body {
   -webkit-line-clamp: unset;
   white-space: nowrap;
   text-overflow: ellipsis;
-  flex: 2;
+  flex: 3;
   min-width: 0;
 }
 .list-mode .book-authors {
@@ -327,15 +327,15 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 1.5;
+  flex: 1;
   min-width: 0;
 }
 .list-mode .book-meta {
   margin-top: 0;
   padding-top: 0;
   white-space: nowrap;
-  flex-shrink: 0;
-  min-width: 3rem;
+  flex: 1;
+  min-width: 0;
 }
 .list-mode .book-actions {
   border-top: none;
@@ -343,6 +343,44 @@ body {
   flex-shrink: 0;
   margin-left: auto;
 }
+
+/* List mode — sortable column headers */
+.book-list-header { display: none; }
+.list-mode .book-list-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  border-bottom: 2px solid var(--border);
+  background: var(--surface);
+}
+.list-mode .book-list-header .book-info {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 1rem;
+  padding: .375rem .75rem;
+  flex-wrap: nowrap;
+}
+.list-sort-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: .7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.list-sort-btn:hover { color: var(--text); }
+.list-sort-btn.sort-active { color: var(--primary); }
+.list-sort-btn.col-title { flex: 3; }
+.list-sort-btn.col-author { flex: 1; }
+.list-sort-btn.col-meta { flex: 1; }
 
 /* Empty state */
 .empty-state {

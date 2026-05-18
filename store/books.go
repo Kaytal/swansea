@@ -88,9 +88,27 @@ const selectCols = `id, COALESCE(isbn,''), title, COALESCE(authors,'[]'),
 
 const PageSize = 25
 
-func (s *Books) ListPage(limit, offset int) ([]*Book, error) {
+var sortCols = map[string]string{
+	"title":     "title",
+	"author":    "json_extract(authors, '$[0]')",
+	"publisher": "publisher",
+	"year":      "published_date",
+}
+
+func sortClause(col, dir string) string {
+	sqlCol, ok := sortCols[col]
+	if !ok {
+		sqlCol = "title"
+	}
+	if strings.EqualFold(dir, "desc") {
+		return sqlCol + " DESC"
+	}
+	return sqlCol + " ASC"
+}
+
+func (s *Books) ListPage(limit, offset int, sortCol, sortDir string) ([]*Book, error) {
 	rows, err := s.db.Query(fmt.Sprintf(
-		`SELECT %s FROM books ORDER BY title LIMIT ? OFFSET ?`, selectCols,
+		`SELECT %s FROM books ORDER BY %s LIMIT ? OFFSET ?`, selectCols, sortClause(sortCol, sortDir),
 	), limit, offset)
 	if err != nil {
 		return nil, err
@@ -132,21 +150,22 @@ func (s *Books) List() ([]*Book, error) {
 	return books, rows.Err()
 }
 
-func (s *Books) ListFiltered(field, value string, limit, offset int) ([]*Book, error) {
+func (s *Books) ListFiltered(field, value string, limit, offset int, sortCol, sortDir string) ([]*Book, error) {
 	var query string
+	sc := sortClause(sortCol, sortDir)
 	switch field {
 	case "category":
 		query = fmt.Sprintf(`SELECT %s FROM books WHERE EXISTS (
 			SELECT 1 FROM json_each(categories) WHERE LOWER(json_each.value) = LOWER(?)
-		) ORDER BY title LIMIT ? OFFSET ?`, selectCols)
+		) ORDER BY %s LIMIT ? OFFSET ?`, selectCols, sc)
 	case "author":
 		query = fmt.Sprintf(`SELECT %s FROM books WHERE EXISTS (
 			SELECT 1 FROM json_each(authors) WHERE LOWER(json_each.value) = LOWER(?)
-		) ORDER BY title LIMIT ? OFFSET ?`, selectCols)
+		) ORDER BY %s LIMIT ? OFFSET ?`, selectCols, sc)
 	case "year":
-		query = fmt.Sprintf(`SELECT %s FROM books WHERE substr(published_date,1,4) = ? ORDER BY title LIMIT ? OFFSET ?`, selectCols)
+		query = fmt.Sprintf(`SELECT %s FROM books WHERE substr(published_date,1,4) = ? ORDER BY %s LIMIT ? OFFSET ?`, selectCols, sc)
 	default:
-		return s.ListPage(limit, offset)
+		return s.ListPage(limit, offset, sortCol, sortDir)
 	}
 	rows, err := s.db.Query(query, value, limit, offset)
 	if err != nil {
