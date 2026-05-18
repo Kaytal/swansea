@@ -1,0 +1,66 @@
+{{define "movies_filters.html"}}
+<aside class="filter-sidebar">
+  <div class="filter-section">
+    <a class="filter-all"
+       href="/movies"
+       hx-get="/ui/movies"
+       hx-push-url="/movies"
+       hx-target="#book-grid"
+       hx-swap="innerHTML">All Movies</a>
+  </div>
+
+  {{if .Genres}}
+  <div class="filter-section">
+    <h3 class="filter-heading">Genres</h3>
+    <ul class="filter-list">
+      {{range .Genres}}
+      <li>
+        <a class="filter-link"
+           href="/movies?genre={{urlquery .}}"
+           hx-get="/ui/movies?genre={{urlquery .}}"
+           hx-push-url="/movies?genre={{urlquery .}}"
+           hx-target="#book-grid"
+           hx-swap="innerHTML">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
+
+  {{if .Directors}}
+  <div class="filter-section">
+    <h3 class="filter-heading">Directors</h3>
+    <ul class="filter-list">
+      {{range .Directors}}
+      <li>
+        <a class="filter-link"
+           href="/movies?director={{urlquery .}}"
+           hx-get="/ui/movies?director={{urlquery .}}"
+           hx-push-url="/movies?director={{urlquery .}}"
+           hx-target="#book-grid"
+           hx-swap="innerHTML">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
+
+  {{if .Years}}
+  <div class="filter-section">
+    <h3 class="filter-heading">Year</h3>
+    <ul class="filter-list">
+      {{range .Years}}
+      <li>
+        <a class="filter-link"
+           href="/movies?year={{.}}"
+           hx-get="/ui/movies?year={{.}}"
+           hx-push-url="/movies?year={{.}}"
+           hx-target="#book-grid"
+           hx-swap="innerHTML">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
+</aside>
+{{end}}

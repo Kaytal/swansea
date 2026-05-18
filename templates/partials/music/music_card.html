@@ -1,0 +1,35 @@
+{{define "music_card.html"}}
+<div class="book-card" id="album-{{.ID}}">
+  {{if .CoverURL}}
+    <img class="book-cover" src="{{.CoverURL}}" alt="Cover of {{.Title}}" loading="lazy">
+  {{else}}
+    <div class="book-cover-placeholder">&#127925;</div>
+  {{end}}
+  <div class="book-info">
+    <p class="book-title">{{.Title}}</p>
+    {{if .Artists}}
+      <p class="book-authors">{{join .Artists ", "}}</p>
+    {{end}}
+    <p class="book-meta">
+      {{if .Label}}{{.Label}}{{end}}
+      {{if and .Label .ReleaseDate}} &middot; {{end}}
+      {{if .ReleaseDate}}{{year .ReleaseDate}}{{end}}
+    </p>
+  </div>
+  <div class="book-actions">
+    <button class="btn btn-ghost btn-sm"
+            hx-get="/ui/music/{{.ID}}/edit"
+            hx-target="#modal-body"
+            @click="openModal()">
+      Edit
+    </button>
+    <button class="btn btn-danger btn-sm"
+            hx-delete="/ui/music/{{.ID}}"
+            hx-target="#album-{{.ID}}"
+            hx-swap="outerHTML"
+            hx-confirm="Remove &ldquo;{{.Title}}&rdquo; from your library?">
+      Delete
+    </button>
+  </div>
+</div>
+{{end}}

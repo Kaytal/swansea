@@ -1,0 +1,66 @@
+{{define "music_filters.html"}}
+<aside class="filter-sidebar">
+  <div class="filter-section">
+    <a class="filter-all"
+       href="/music"
+       hx-get="/ui/music"
+       hx-push-url="/music"
+       hx-target="#book-grid"
+       hx-swap="innerHTML">All Albums</a>
+  </div>
+
+  {{if .Genres}}
+  <div class="filter-section">
+    <h3 class="filter-heading">Genres</h3>
+    <ul class="filter-list">
+      {{range .Genres}}
+      <li>
+        <a class="filter-link"
+           href="/music?genre={{urlquery .}}"
+           hx-get="/ui/music?genre={{urlquery .}}"
+           hx-push-url="/music?genre={{urlquery .}}"
+           hx-target="#book-grid"
+           hx-swap="innerHTML">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
+
+  {{if .Artists}}
+  <div class="filter-section">
+    <h3 class="filter-heading">Artists</h3>
+    <ul class="filter-list">
+      {{range .Artists}}
+      <li>
+        <a class="filter-link"
+           href="/music?artist={{urlquery .}}"
+           hx-get="/ui/music?artist={{urlquery .}}"
+           hx-push-url="/music?artist={{urlquery .}}"
+           hx-target="#book-grid"
+           hx-swap="innerHTML">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
+
+  {{if .Years}}
+  <div class="filter-section">
+    <h3 class="filter-heading">Year</h3>
+    <ul class="filter-list">
+      {{range .Years}}
+      <li>
+        <a class="filter-link"
+           href="/music?year={{.}}"
+           hx-get="/ui/music?year={{.}}"
+           hx-push-url="/music?year={{.}}"
+           hx-target="#book-grid"
+           hx-swap="innerHTML">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
+</aside>
+{{end}}

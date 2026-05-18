@@ -22,11 +22,37 @@
 
 <header class="header">
   <h1>Swansea Library</h1>
+  <nav class="tab-nav">
+    <button class="tab-btn" :class="activeTab === 'books' && 'active'"
+            hx-get="/ui/books"
+            hx-target="#book-grid"
+            hx-swap="innerHTML"
+            hx-push-url="/"
+            @click="switchTab('books', '/ui/filters')">Books</button>
+    <button class="tab-btn" :class="activeTab === 'games' && 'active'"
+            hx-get="/ui/games"
+            hx-target="#book-grid"
+            hx-swap="innerHTML"
+            hx-push-url="/games"
+            @click="switchTab('games', '/ui/games/filters')">Video Games</button>
+    <button class="tab-btn" :class="activeTab === 'movies' && 'active'"
+            hx-get="/ui/movies"
+            hx-target="#book-grid"
+            hx-swap="innerHTML"
+            hx-push-url="/movies"
+            @click="switchTab('movies', '/ui/movies/filters')">Movies</button>
+    <button class="tab-btn" :class="activeTab === 'music' && 'active'"
+            hx-get="/ui/music"
+            hx-target="#book-grid"
+            hx-swap="innerHTML"
+            hx-push-url="/music"
+            @click="switchTab('music', '/ui/music/filters')">Music</button>
+  </nav>
   <div class="search-bar">
     <input type="search"
            name="q"
-           placeholder="Search books…"
-           hx-get="/ui/search"
+           :placeholder="searchPlaceholder"
+           :hx-get="searchURL"
            hx-trigger="input changed delay:300ms, search"
            hx-target="#book-grid"
            hx-swap="innerHTML"
@@ -35,7 +61,10 @@
     <select name="field">
       <option value="">All</option>
       <option value="title">Title</option>
-      <option value="author">Author</option>
+      <option x-show="activeTab === 'books'" value="author">Author</option>
+      <option x-show="activeTab === 'games'" value="developer">Developer</option>
+      <option x-show="activeTab === 'movies'" value="director">Director</option>
+      <option x-show="activeTab === 'music'" value="artist">Artist</option>
     </select>
   </div>
   <div class="header-actions">
@@ -54,21 +83,22 @@
       </button>
     </div>
     <button class="btn btn-secondary"
+            x-show="activeTab === 'books'"
             @click="openScanner()">
       Scan ISBN
     </button>
     <button class="btn btn-primary"
-            hx-get="/ui/books/add"
+            :hx-get="addURL"
             hx-target="#modal-body"
-            @click="openModal()">
-      + Add Book
+            @click="openModal()"
+            x-text="addLabel">
     </button>
   </div>
 </header>
 
 <main class="main layout">
   <div id="filter-sidebar"
-       hx-get="/ui/filters"
+       hx-get="{{.InitialFiltersURL}}"
        hx-trigger="load"
        hx-swap="innerHTML">
   </div>
@@ -90,7 +120,7 @@
   <div id="modal-body" class="modal-body"></div>
 </dialog>
 
-<!-- Scanner modal -->
+<!-- Scanner modal (books only) -->
 <dialog id="scanner-modal" class="modal" x-data="scanner()">
   <div class="modal-header">
     <h2>Add by ISBN</h2>
@@ -143,8 +173,60 @@
 
 <script>
 function app() {
+  const initialTab = '{{.ActiveTab}}' || localStorage.getItem('swansea-tab') || 'books';
   return {
     layout: localStorage.getItem('swansea-layout') || 'grid',
+    activeTab: initialTab,
+
+    get searchURL() {
+      const urls = {
+        books:  '/ui/search',
+        games:  '/ui/games/search',
+        movies: '/ui/movies/search',
+        music:  '/ui/music/search',
+      };
+      return urls[this.activeTab] || '/ui/search';
+    },
+
+    get searchPlaceholder() {
+      const labels = {
+        books:  'Search books…',
+        games:  'Search games…',
+        movies: 'Search movies…',
+        music:  'Search music…',
+      };
+      return labels[this.activeTab] || 'Search…';
+    },
+
+    get addURL() {
+      const urls = {
+        books:  '/ui/books/add',
+        games:  '/ui/games/add',
+        movies: '/ui/movies/add',
+        music:  '/ui/music/add',
+      };
+      return urls[this.activeTab] || '/ui/books/add';
+    },
+
+    get addLabel() {
+      const labels = {
+        books:  '+ Add Book',
+        games:  '+ Add Game',
+        movies: '+ Add Movie',
+        music:  '+ Add Album',
+      };
+      return labels[this.activeTab] || '+ Add';
+    },
+
+    switchTab(tab, filtersURL) {
+      this.activeTab = tab;
+      localStorage.setItem('swansea-tab', tab);
+      htmx.ajax('GET', filtersURL, {
+        target: '#filter-sidebar',
+        swap: 'innerHTML',
+      });
+    },
+
     setLayout(v) {
       this.layout = v;
       localStorage.setItem('swansea-layout', v);
@@ -165,7 +247,6 @@ function app() {
     },
     closeScanner() {
       const dlg = document.getElementById('scanner-modal');
-      // stop camera if running
       const alpine = dlg._x_dataStack && dlg._x_dataStack[0];
       if (alpine) alpine.stopCamera();
       dlg.close();

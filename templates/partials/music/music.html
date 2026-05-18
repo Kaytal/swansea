@@ -1,0 +1,17 @@
+{{define "music.html"}}
+{{if .Albums}}
+<div class="book-grid">
+  {{range .Albums}}
+    {{template "music_card.html" .}}
+  {{end}}
+</div>
+{{else}}
+<div class="book-grid">
+  <div class="empty-state">
+    <p>Your music library is empty.</p>
+    <p style="font-size:.9rem">Add an album manually to get started.</p>
+  </div>
+</div>
+{{end}}
+{{template "music_pagination.html" .}}
+{{end}}

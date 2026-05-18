@@ -1,0 +1,52 @@
+{{define "movies_edit_modal.html"}}
+<script>document.getElementById('modal-title').textContent = 'Edit Movie';</script>
+<form hx-put="/ui/movies/{{.ID}}"
+      hx-target="#movie-{{.ID}}"
+      hx-swap="outerHTML">
+  <div class="form-group">
+    <label>Title *</label>
+    <input type="text" name="title" value="{{.Title}}" required autofocus>
+  </div>
+  <div class="form-group">
+    <label>Directors</label>
+    <textarea name="directors" rows="2">{{joinLines .Directors}}</textarea>
+    <p class="form-hint">One director per line</p>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Studio</label>
+      <input type="text" name="studio" value="{{.Studio}}">
+    </div>
+    <div class="form-group">
+      <label>Release date</label>
+      <input type="text" name="release_date" value="{{.ReleaseDate}}" placeholder="2024-01-15">
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Runtime (minutes)</label>
+      <input type="number" name="runtime" value="{{.Runtime}}" min="0">
+    </div>
+    <div class="form-group">
+      <label>TMDB ID</label>
+      <input type="number" name="tmdb_id" value="{{.TmdbID}}" min="0">
+    </div>
+  </div>
+  <div class="form-group">
+    <label>Genres</label>
+    <textarea name="genres" rows="2">{{joinLines .Genres}}</textarea>
+  </div>
+  <div class="form-group">
+    <label>Description</label>
+    <textarea name="description" rows="3">{{.Description}}</textarea>
+  </div>
+  <div class="form-group">
+    <label>Cover image URL</label>
+    <input type="url" name="cover_url" value="{{.CoverURL}}">
+  </div>
+  <div class="form-actions">
+    <button type="button" class="btn btn-ghost" @click="closeModal()">Cancel</button>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+  </div>
+</form>
+{{end}}

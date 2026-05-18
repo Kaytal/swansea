@@ -102,7 +102,9 @@ func (h *UI) render(w http.ResponseWriter, name string, data any) {
 }
 
 type indexData struct {
-	InitialBooksURL string
+	InitialBooksURL   string
+	InitialFiltersURL string
+	ActiveTab         string
 }
 
 func (h *UI) index(w http.ResponseWriter, r *http.Request) {
@@ -110,14 +112,22 @@ func (h *UI) index(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	h.render(w, "index.html", indexData{InitialBooksURL: "/ui/books"})
+	h.render(w, "index.html", indexData{
+		InitialBooksURL:   "/ui/books",
+		InitialFiltersURL: "/ui/filters",
+		ActiveTab:         "books",
+	})
 }
 
 func (h *UI) filterPageHandler(field string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		value := r.PathValue("value")
 		apiURL := "/ui/books?" + field + "=" + url.QueryEscape(value)
-		h.render(w, "index.html", indexData{InitialBooksURL: apiURL})
+		h.render(w, "index.html", indexData{
+			InitialBooksURL:   apiURL,
+			InitialFiltersURL: "/ui/filters",
+			ActiveTab:         "books",
+		})
 	}
 }
 

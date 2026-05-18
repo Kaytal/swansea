@@ -1,0 +1,17 @@
+{{define "games.html"}}
+{{if .Games}}
+<div class="book-grid">
+  {{range .Games}}
+    {{template "game_card.html" .}}
+  {{end}}
+</div>
+{{else}}
+<div class="book-grid">
+  <div class="empty-state">
+    <p>Your game library is empty.</p>
+    <p style="font-size:.9rem">Add a game manually to get started.</p>
+  </div>
+</div>
+{{end}}
+{{template "games_pagination.html" .}}
+{{end}}

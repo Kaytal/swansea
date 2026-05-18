@@ -1,0 +1,66 @@
+{{define "games_filters.html"}}
+<aside class="filter-sidebar">
+  <div class="filter-section">
+    <a class="filter-all"
+       href="/games"
+       hx-get="/ui/games"
+       hx-push-url="/games"
+       hx-target="#book-grid"
+       hx-swap="innerHTML">All Games</a>
+  </div>
+
+  {{if .Genres}}
+  <div class="filter-section">
+    <h3 class="filter-heading">Genres</h3>
+    <ul class="filter-list">
+      {{range .Genres}}
+      <li>
+        <a class="filter-link"
+           href="/games?genre={{urlquery .}}"
+           hx-get="/ui/games?genre={{urlquery .}}"
+           hx-push-url="/games?genre={{urlquery .}}"
+           hx-target="#book-grid"
+           hx-swap="innerHTML">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
+
+  {{if .Platforms}}
+  <div class="filter-section">
+    <h3 class="filter-heading">Platforms</h3>
+    <ul class="filter-list">
+      {{range .Platforms}}
+      <li>
+        <a class="filter-link"
+           href="/games?platform={{urlquery .}}"
+           hx-get="/ui/games?platform={{urlquery .}}"
+           hx-push-url="/games?platform={{urlquery .}}"
+           hx-target="#book-grid"
+           hx-swap="innerHTML">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
+
+  {{if .Years}}
+  <div class="filter-section">
+    <h3 class="filter-heading">Year</h3>
+    <ul class="filter-list">
+      {{range .Years}}
+      <li>
+        <a class="filter-link"
+           href="/games?year={{.}}"
+           hx-get="/ui/games?year={{.}}"
+           hx-push-url="/games?year={{.}}"
+           hx-target="#book-grid"
+           hx-swap="innerHTML">{{.}}</a>
+      </li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
+</aside>
+{{end}}

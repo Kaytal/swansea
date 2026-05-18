@@ -1,0 +1,52 @@
+{{define "music_edit_modal.html"}}
+<script>document.getElementById('modal-title').textContent = 'Edit Album';</script>
+<form hx-put="/ui/music/{{.ID}}"
+      hx-target="#album-{{.ID}}"
+      hx-swap="outerHTML">
+  <div class="form-group">
+    <label>Title *</label>
+    <input type="text" name="title" value="{{.Title}}" required autofocus>
+  </div>
+  <div class="form-group">
+    <label>Artists</label>
+    <textarea name="artists" rows="2">{{joinLines .Artists}}</textarea>
+    <p class="form-hint">One artist per line</p>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Label</label>
+      <input type="text" name="label" value="{{.Label}}">
+    </div>
+    <div class="form-group">
+      <label>Release date</label>
+      <input type="text" name="release_date" value="{{.ReleaseDate}}" placeholder="2024-01-15">
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Track count</label>
+      <input type="number" name="track_count" value="{{.TrackCount}}" min="0">
+    </div>
+    <div class="form-group">
+      <label>Catalog number</label>
+      <input type="text" name="catalog_number" value="{{.CatalogNumber}}">
+    </div>
+  </div>
+  <div class="form-group">
+    <label>Genres</label>
+    <textarea name="genres" rows="2">{{joinLines .Genres}}</textarea>
+  </div>
+  <div class="form-group">
+    <label>Description</label>
+    <textarea name="description" rows="3">{{.Description}}</textarea>
+  </div>
+  <div class="form-group">
+    <label>Cover image URL</label>
+    <input type="url" name="cover_url" value="{{.CoverURL}}">
+  </div>
+  <div class="form-actions">
+    <button type="button" class="btn btn-ghost" @click="closeModal()">Cancel</button>
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+  </div>
+</form>
+{{end}}

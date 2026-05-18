@@ -66,6 +66,24 @@ func main() {
 	}
 	ui.Register(mux, assets)
 
+	gamesUI, err := handlers.NewGamesUI(gameStore, assets, cv)
+	if err != nil {
+		log.Fatalf("failed to load games templates: %v", err)
+	}
+	gamesUI.Register(mux)
+
+	moviesUI, err := handlers.NewMoviesUI(movieStore, assets, cv)
+	if err != nil {
+		log.Fatalf("failed to load movies templates: %v", err)
+	}
+	moviesUI.Register(mux)
+
+	musicUI, err := handlers.NewMusicUI(musicStore, assets, cv)
+	if err != nil {
+		log.Fatalf("failed to load music templates: %v", err)
+	}
+	musicUI.Register(mux)
+
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: mux,

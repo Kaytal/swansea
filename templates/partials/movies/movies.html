@@ -1,0 +1,17 @@
+{{define "movies.html"}}
+{{if .Movies}}
+<div class="book-grid">
+  {{range .Movies}}
+    {{template "movie_card.html" .}}
+  {{end}}
+</div>
+{{else}}
+<div class="book-grid">
+  <div class="empty-state">
+    <p>Your movie library is empty.</p>
+    <p style="font-size:.9rem">Add a movie manually to get started.</p>
+  </div>
+</div>
+{{end}}
+{{template "movies_pagination.html" .}}
+{{end}}
