@@ -21,6 +21,7 @@ type Book struct {
 	PageCount     int      `json:"page_count"`
 	CoverURL      string   `json:"cover_url"`
 	Categories    []string `json:"categories"`
+	Location      string   `json:"location"`
 	CreatedAt     string   `json:"created_at"`
 	UpdatedAt     string   `json:"updated_at"`
 }
@@ -35,6 +36,7 @@ type BookInput struct {
 	PageCount     int      `json:"page_count"`
 	CoverURL      string   `json:"cover_url"`
 	Categories    []string `json:"categories"`
+	Location      string   `json:"location"`
 }
 
 type Books struct {
@@ -71,7 +73,7 @@ func scanBook(row interface{ Scan(...any) error }) (*Book, error) {
 	err := row.Scan(
 		&b.ID, &b.ISBN, &b.Title, &authors, &b.Publisher,
 		&b.PublishedDate, &b.Description, &b.PageCount,
-		&b.CoverURL, &categories, &b.CreatedAt, &b.UpdatedAt,
+		&b.CoverURL, &categories, &b.Location, &b.CreatedAt, &b.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -84,7 +86,7 @@ func scanBook(row interface{ Scan(...any) error }) (*Book, error) {
 const selectCols = `id, COALESCE(isbn,''), title, COALESCE(authors,'[]'),
 	COALESCE(publisher,''), COALESCE(published_date,''),
 	COALESCE(description,''), page_count, COALESCE(cover_url,''),
-	COALESCE(categories,'[]'), created_at, updated_at`
+	COALESCE(categories,'[]'), COALESCE(location,''), created_at, updated_at`
 
 const PageSize = 25
 
@@ -357,11 +359,11 @@ func nullISBN(isbn string) any {
 
 func (s *Books) Create(in BookInput) (*Book, error) {
 	res, err := s.db.Exec(`
-		INSERT INTO books (isbn, title, authors, publisher, published_date, description, page_count, cover_url, categories)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO books (isbn, title, authors, publisher, published_date, description, page_count, cover_url, categories, location)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		nullISBN(in.ISBN), in.Title, marshalStrings(in.Authors), in.Publisher,
 		in.PublishedDate, in.Description, in.PageCount, in.CoverURL,
-		marshalStrings(in.Categories),
+		marshalStrings(in.Categories), in.Location,
 	)
 	if err != nil {
 		return nil, err
@@ -373,11 +375,11 @@ func (s *Books) Create(in BookInput) (*Book, error) {
 func (s *Books) Update(id int64, in BookInput) (*Book, error) {
 	res, err := s.db.Exec(`
 		UPDATE books SET isbn=?, title=?, authors=?, publisher=?, published_date=?,
-		description=?, page_count=?, cover_url=?, categories=?
+		description=?, page_count=?, cover_url=?, categories=?, location=?
 		WHERE id=?`,
 		nullISBN(in.ISBN), in.Title, marshalStrings(in.Authors), in.Publisher,
 		in.PublishedDate, in.Description, in.PageCount, in.CoverURL,
-		marshalStrings(in.Categories), id,
+		marshalStrings(in.Categories), in.Location, id,
 	)
 	if err != nil {
 		return nil, err

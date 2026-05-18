@@ -428,6 +428,10 @@ func parseBookForm(w http.ResponseWriter, r *http.Request) store.BookInput {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	r.ParseForm()
 	pageCount, _ := strconv.Atoi(r.FormValue("page_count"))
+	location := r.FormValue("location")
+	if len(location) > 100 {
+		location = location[:100]
+	}
 	return store.BookInput{
 		ISBN:          r.FormValue("isbn"),
 		Title:         r.FormValue("title"),
@@ -438,6 +442,7 @@ func parseBookForm(w http.ResponseWriter, r *http.Request) store.BookInput {
 		PageCount:     pageCount,
 		CoverURL:      r.FormValue("cover_url"),
 		Categories:    splitLines(r.FormValue("categories")),
+		Location:      location,
 	}
 }
 

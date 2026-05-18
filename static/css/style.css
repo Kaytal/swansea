@@ -277,6 +277,15 @@ body {
   padding-top: .25rem;
 }
 
+.book-location {
+  font-size: .72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.list-mode .book-location { display: none; }
+
 .book-actions {
   display: flex;
   gap: .5rem;

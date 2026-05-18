@@ -15,6 +15,7 @@
       {{if and .Publisher .PublishedDate}} &middot; {{end}}
       {{if .PublishedDate}}{{year .PublishedDate}}{{end}}
     </p>
+    {{if .Location}}<p class="book-location">{{.Location}}</p>{{end}}
   </div>
   <div class="book-actions">
     <button class="btn btn-ghost btn-sm"

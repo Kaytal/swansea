@@ -95,6 +95,15 @@ func migrate(db *sql.DB) error {
 		}
 	}
 
+	if version < 8 {
+		if _, err := db.Exec(`ALTER TABLE books ADD COLUMN location TEXT`); err != nil {
+			return err
+		}
+		if _, err := db.Exec(`PRAGMA user_version = 8`); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
