@@ -1,0 +1,32 @@
+{{define "games_lookup_results.html"}}
+{{if not .}}
+<p class="lookup-empty">No results found.</p>
+{{else}}
+<ul class="lookup-results">
+  {{range .}}
+  <li class="lookup-result">
+    {{if .CoverURL}}
+    <img class="lookup-result-img" src="{{.CoverURL}}" alt="">
+    {{else}}
+    <div class="lookup-no-img"></div>
+    {{end}}
+    <div class="lookup-result-info">
+      <strong>{{.Title}}</strong>
+      <span class="lookup-result-meta">{{.Platform}}{{if and .Platform .ReleaseDate}} · {{end}}{{.ReleaseDate}}</span>
+    </div>
+    <form hx-post="/ui/games/lookup/select" hx-target="#modal-body" hx-swap="innerHTML">
+      <input type="hidden" name="title" value="{{.Title}}">
+      <input type="hidden" name="platform" value="{{.Platform}}">
+      <textarea hidden name="developers">{{joinLines .Developers}}</textarea>
+      <input type="hidden" name="publisher" value="{{.Publisher}}">
+      <input type="hidden" name="release_date" value="{{.ReleaseDate}}">
+      <textarea hidden name="genres">{{joinLines .Genres}}</textarea>
+      <textarea hidden name="description">{{.Description}}</textarea>
+      <input type="hidden" name="cover_url" value="{{.CoverURL}}">
+      <button type="submit" class="btn btn-secondary btn-sm">Use</button>
+    </form>
+  </li>
+  {{end}}
+</ul>
+{{end}}
+{{end}}

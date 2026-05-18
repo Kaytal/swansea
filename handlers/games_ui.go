@@ -56,6 +56,8 @@ func (h *GamesUI) Register(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /ui/games/{id}", h.deleteGame)
 	mux.HandleFunc("GET /ui/games/search", h.search)
 	mux.HandleFunc("GET /ui/games/filters", h.filters)
+	mux.HandleFunc("GET /ui/games/lookup", h.lookupSearch)
+	mux.HandleFunc("POST /ui/games/lookup/select", h.lookupSelect)
 }
 
 func (h *GamesUI) render(w http.ResponseWriter, name string, data any) {
@@ -316,6 +318,29 @@ func (h *GamesUI) deleteGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *GamesUI) lookupSearch(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q == "" {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		return
+	}
+	results, err := lookup.ScreenScraperSearch(q)
+	if err != nil {
+		log.Printf("game lookup search %q: %v", q, err)
+		h.render(w, "games_lookup_results.html", nil)
+		return
+	}
+	h.render(w, "games_lookup_results.html", results)
+}
+
+func (h *GamesUI) lookupSelect(w http.ResponseWriter, r *http.Request) {
+	in, err := parseGameForm(w, r)
+	if err != nil {
+		return
+	}
+	h.render(w, "games_add_modal.html", &in)
 }
 
 func parseGameForm(w http.ResponseWriter, r *http.Request) (store.VideoGameInput, error) {

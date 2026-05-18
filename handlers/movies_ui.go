@@ -56,6 +56,8 @@ func (h *MoviesUI) Register(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /ui/movies/{id}", h.deleteMovie)
 	mux.HandleFunc("GET /ui/movies/search", h.search)
 	mux.HandleFunc("GET /ui/movies/filters", h.filters)
+	mux.HandleFunc("GET /ui/movies/lookup", h.lookupSearch)
+	mux.HandleFunc("POST /ui/movies/lookup/select", h.lookupSelect)
 }
 
 func (h *MoviesUI) render(w http.ResponseWriter, name string, data any) {
@@ -316,6 +318,40 @@ func (h *MoviesUI) deleteMovie(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *MoviesUI) lookupSearch(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q == "" {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		return
+	}
+	results, err := lookup.TMDBSearch(q)
+	if err != nil {
+		log.Printf("movie lookup search %q: %v", q, err)
+		h.render(w, "movies_lookup_results.html", nil)
+		return
+	}
+	h.render(w, "movies_lookup_results.html", results)
+}
+
+func (h *MoviesUI) lookupSelect(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+	tmdbID, err := strconv.ParseInt(r.FormValue("tmdb_id"), 10, 64)
+	if err != nil || tmdbID <= 0 {
+		http.Error(w, "invalid tmdb_id", http.StatusBadRequest)
+		return
+	}
+	result, err := lookup.TMDBByID(tmdbID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	h.render(w, "movies_add_modal.html", result)
 }
 
 func parseMovieForm(w http.ResponseWriter, r *http.Request) (store.MovieInput, error) {

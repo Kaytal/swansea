@@ -3,9 +3,11 @@ package lookup
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"swansea/store"
 )
@@ -66,9 +68,9 @@ type ssSynopsis struct {
 	Text   string `json:"text"`
 }
 
-// ScreenScraperByTitle searches ScreenScraper.fr for a video game by title.
+// ScreenScraperSearch searches ScreenScraper.fr for games matching title and returns all results.
 // Requires SCREENSCRAPER_USERNAME and SCREENSCRAPER_PASSWORD environment variables.
-func ScreenScraperByTitle(title string) (*store.VideoGameInput, error) {
+func ScreenScraperSearch(title string) ([]*store.VideoGameInput, error) {
 	ssid := os.Getenv("SCREENSCRAPER_USERNAME")
 	sspassword := os.Getenv("SCREENSCRAPER_PASSWORD")
 	if ssid == "" || sspassword == "" {
@@ -76,8 +78,12 @@ func ScreenScraperByTitle(title string) (*store.VideoGameInput, error) {
 	}
 
 	params := url.Values{}
-	params.Set("devid", os.Getenv("SCREENSCRAPER_DEVID"))
-	params.Set("devpassword", os.Getenv("SCREENSCRAPER_DEVPASSWORD"))
+	if devid := os.Getenv("SCREENSCRAPER_DEVID"); devid != "" {
+		params.Set("devid", devid)
+	}
+	if devpw := os.Getenv("SCREENSCRAPER_DEVPASSWORD"); devpw != "" {
+		params.Set("devpassword", devpw)
+	}
 	params.Set("softname", "swansea")
 	params.Set("ssid", ssid)
 	params.Set("sspassword", sspassword)
@@ -96,15 +102,37 @@ func ScreenScraperByTitle(title string) (*store.VideoGameInput, error) {
 		return nil, fmt.Errorf("screenscraper returned %d", resp.StatusCode)
 	}
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading screenscraper response: %w", err)
+	}
+
 	var sr ssSearchResponse
-	if err := json.NewDecoder(resp.Body).Decode(&sr); err != nil {
-		return nil, fmt.Errorf("decoding screenscraper response: %w", err)
+	if err := json.Unmarshal(body, &sr); err != nil {
+		msg := strings.TrimSpace(string(body))
+		if len(msg) > 200 {
+			msg = msg[:200]
+		}
+		return nil, fmt.Errorf("screenscraper error: %s", msg)
 	}
 	if len(sr.Response.Jeux) == 0 {
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, title)
 	}
 
-	return ssGameToInput(sr.Response.Jeux[0]), nil
+	results := make([]*store.VideoGameInput, len(sr.Response.Jeux))
+	for i, g := range sr.Response.Jeux {
+		results[i] = ssGameToInput(g)
+	}
+	return results, nil
+}
+
+// ScreenScraperByTitle returns the top result from ScreenScraper for the given title.
+func ScreenScraperByTitle(title string) (*store.VideoGameInput, error) {
+	results, err := ScreenScraperSearch(title)
+	if err != nil {
+		return nil, err
+	}
+	return results[0], nil
 }
 
 func ssGameToInput(g ssGame) *store.VideoGameInput {

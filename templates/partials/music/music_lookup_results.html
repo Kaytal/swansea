@@ -1,0 +1,22 @@
+{{define "music_lookup_results.html"}}
+{{if not .}}
+<p class="lookup-empty">No results found.</p>
+{{else}}
+<ul class="lookup-results">
+  {{range .}}
+  <li class="lookup-result">
+    <div class="lookup-no-img"></div>
+    <div class="lookup-result-info">
+      <strong>{{.RawTitle}}</strong>
+      <span class="lookup-result-meta">{{.Category}}</span>
+    </div>
+    <form hx-post="/ui/music/lookup/select" hx-target="#modal-body" hx-swap="innerHTML">
+      <input type="hidden" name="category" value="{{.Category}}">
+      <input type="hidden" name="discid" value="{{.DiscID}}">
+      <button type="submit" class="btn btn-secondary btn-sm">Use</button>
+    </form>
+  </li>
+  {{end}}
+</ul>
+{{end}}
+{{end}}

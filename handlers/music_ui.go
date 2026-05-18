@@ -56,6 +56,8 @@ func (h *MusicUI) Register(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /ui/music/{id}", h.deleteAlbum)
 	mux.HandleFunc("GET /ui/music/search", h.search)
 	mux.HandleFunc("GET /ui/music/filters", h.filters)
+	mux.HandleFunc("GET /ui/music/lookup", h.lookupSearch)
+	mux.HandleFunc("POST /ui/music/lookup/select", h.lookupSelect)
 }
 
 func (h *MusicUI) render(w http.ResponseWriter, name string, data any) {
@@ -316,6 +318,37 @@ func (h *MusicUI) deleteAlbum(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func (h *MusicUI) lookupSearch(w http.ResponseWriter, r *http.Request) {
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q == "" {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		return
+	}
+	results, err := lookup.GnudbSearch(q)
+	if err != nil {
+		log.Printf("music lookup search %q: %v", q, err)
+		h.render(w, "music_lookup_results.html", nil)
+		return
+	}
+	h.render(w, "music_lookup_results.html", results)
+}
+
+func (h *MusicUI) lookupSelect(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+	category := r.FormValue("category")
+	discID := r.FormValue("discid")
+	result, err := lookup.GnudbByDiscID(category, discID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	h.render(w, "music_add_modal.html", result)
 }
 
 func parseMusicForm(w http.ResponseWriter, r *http.Request) (store.MusicAlbumInput, error) {

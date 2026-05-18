@@ -1,11 +1,24 @@
 {{define "games_add_modal.html"}}
 <script>document.getElementById('modal-title').textContent = 'Add Game';</script>
+{{if not .}}
+<div class="lookup-search-section">
+  <form class="lookup-search"
+        hx-get="/ui/games/lookup"
+        hx-target="#game-lookup-results"
+        hx-swap="innerHTML">
+    <input type="search" name="q" placeholder="Search ScreenScraper…" autofocus autocomplete="off">
+    <button type="submit" class="btn btn-secondary">Search</button>
+  </form>
+  <div id="game-lookup-results"></div>
+</div>
+<div class="lookup-divider">— or fill in manually —</div>
+{{end}}
 <form hx-post="/ui/games"
       hx-target="#book-grid"
       hx-swap="innerHTML">
   <div class="form-group">
     <label>Title *</label>
-    <input type="text" name="title" value="{{if .}}{{.Title}}{{end}}" required autofocus>
+    <input type="text" name="title" value="{{if .}}{{.Title}}{{end}}" required {{if .}}autofocus{{end}}>
   </div>
   <div class="form-row">
     <div class="form-group">

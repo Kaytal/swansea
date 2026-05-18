@@ -14,18 +14,16 @@ const gnudbBase = "https://gnudb.gnudb.org/~cddb/cddb.cgi"
 const gnudbHello = "anonymous gnudb.gnudb.org swansea 1.0"
 const gnudbProto = "6"
 
-// GnudbByArtistTitle searches gnudb.org for a music album by artist and title.
-// Uses the CDDB-over-HTTP protocol (no auth required).
-// The query parameter should be "Artist / Album Title" or just a title.
-func GnudbByArtistTitle(query string) (*store.MusicAlbumInput, error) {
-	discID, category, err := gnudbFind(query)
-	if err != nil {
-		return nil, err
-	}
-	return gnudbRead(category, discID)
+// GnudbSearchResult is a lightweight result from a gnudb find query.
+type GnudbSearchResult struct {
+	Category string
+	DiscID   string
+	RawTitle string // "Artist / Album" as returned by gnudb
 }
 
-func gnudbFind(query string) (discID, category string, err error) {
+// GnudbSearch searches gnudb.org for music matching query and returns all results.
+// Uses the CDDB-over-HTTP protocol (no auth required).
+func GnudbSearch(query string) ([]GnudbSearchResult, error) {
 	params := url.Values{}
 	params.Set("cmd", "cddb find "+query)
 	params.Set("hello", gnudbHello)
@@ -34,50 +32,72 @@ func gnudbFind(query string) (discID, category string, err error) {
 	apiURL := gnudbBase + "?" + params.Encode()
 	resp, err := HTTPClient.Get(apiURL)
 	if err != nil {
-		return "", "", fmt.Errorf("gnudb find request failed: %w", err)
+		return nil, fmt.Errorf("gnudb find request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("gnudb returned %d", resp.StatusCode)
+		return nil, fmt.Errorf("gnudb returned %d", resp.StatusCode)
 	}
 
 	scanner := bufio.NewScanner(resp.Body)
 	if !scanner.Scan() {
-		return "", "", fmt.Errorf("%w: %s", ErrNotFound, query)
+		return nil, fmt.Errorf("%w: %s", ErrNotFound, query)
 	}
 	statusLine := scanner.Text()
 
-	// 200 = exact match, 211 = inexact matches follow
 	if len(statusLine) < 3 {
-		return "", "", fmt.Errorf("%w: %s", ErrNotFound, query)
+		return nil, fmt.Errorf("%w: %s", ErrNotFound, query)
 	}
 	code := statusLine[:3]
+
+	var results []GnudbSearchResult
 	switch code {
 	case "200":
 		// single exact match: "200 category discid Artist / Title"
-		parts := strings.Fields(statusLine)
-		if len(parts) < 3 {
-			return "", "", fmt.Errorf("%w: %s", ErrNotFound, query)
+		fields := strings.Fields(statusLine)
+		if len(fields) < 3 {
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, query)
 		}
-		return parts[2], parts[1], nil
+		rawTitle := strings.Join(fields[3:], " ")
+		results = append(results, GnudbSearchResult{Category: fields[1], DiscID: fields[2], RawTitle: rawTitle})
 	case "211", "210":
-		// multiple matches — read the first entry line
-		if !scanner.Scan() {
-			return "", "", fmt.Errorf("%w: %s", ErrNotFound, query)
+		// multiple matches: one per line, terminated by "."
+		for scanner.Scan() {
+			line := scanner.Text()
+			if line == "." {
+				break
+			}
+			fields := strings.Fields(line)
+			if len(fields) < 2 {
+				continue
+			}
+			rawTitle := strings.Join(fields[2:], " ")
+			results = append(results, GnudbSearchResult{Category: fields[0], DiscID: fields[1], RawTitle: rawTitle})
 		}
-		line := scanner.Text()
-		if line == "." {
-			return "", "", fmt.Errorf("%w: %s", ErrNotFound, query)
+		if len(results) == 0 {
+			return nil, fmt.Errorf("%w: %s", ErrNotFound, query)
 		}
-		parts := strings.Fields(line)
-		if len(parts) < 2 {
-			return "", "", fmt.Errorf("%w: %s", ErrNotFound, query)
-		}
-		return parts[1], parts[0], nil
 	default:
-		return "", "", fmt.Errorf("%w: %s", ErrNotFound, query)
+		return nil, fmt.Errorf("%w: %s", ErrNotFound, query)
 	}
+	return results, nil
+}
+
+// GnudbByDiscID fetches full album details for a specific gnudb category and disc ID.
+func GnudbByDiscID(category, discID string) (*store.MusicAlbumInput, error) {
+	return gnudbRead(category, discID)
+}
+
+// GnudbByArtistTitle searches gnudb.org for a music album by artist and title.
+// Uses the CDDB-over-HTTP protocol (no auth required).
+// The query parameter should be "Artist / Album Title" or just a title.
+func GnudbByArtistTitle(query string) (*store.MusicAlbumInput, error) {
+	results, err := GnudbSearch(query)
+	if err != nil {
+		return nil, err
+	}
+	return gnudbRead(results[0].Category, results[0].DiscID)
 }
 
 func isAlphanumeric(s string) bool {

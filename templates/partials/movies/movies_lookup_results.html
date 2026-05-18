@@ -1,0 +1,25 @@
+{{define "movies_lookup_results.html"}}
+{{if not .}}
+<p class="lookup-empty">No results found.</p>
+{{else}}
+<ul class="lookup-results">
+  {{range .}}
+  <li class="lookup-result">
+    {{if .PosterURL}}
+    <img class="lookup-result-img" src="{{.PosterURL}}" alt="">
+    {{else}}
+    <div class="lookup-no-img"></div>
+    {{end}}
+    <div class="lookup-result-info">
+      <strong>{{.Title}}</strong>
+      <span class="lookup-result-meta">{{.ReleaseYear}}</span>
+    </div>
+    <form hx-post="/ui/movies/lookup/select" hx-target="#modal-body" hx-swap="innerHTML">
+      <input type="hidden" name="tmdb_id" value="{{.ID}}">
+      <button type="submit" class="btn btn-secondary btn-sm">Use</button>
+    </form>
+  </li>
+  {{end}}
+</ul>
+{{end}}
+{{end}}

@@ -54,16 +54,23 @@ func tmdbGet(reqURL, apiKey string) (*http.Response, error) {
 	return HTTPClient.Do(req)
 }
 
-// TMDBByTitle searches The Movie Database for a movie by title.
+// TMDBSearchResult is a lightweight result for displaying TMDB search matches.
+type TMDBSearchResult struct {
+	ID          int64
+	Title       string
+	ReleaseYear string
+	PosterURL   string
+}
+
+// TMDBSearch searches The Movie Database for movies matching title and returns a list of results.
 // Requires the TMDB_API_KEY environment variable.
-func TMDBByTitle(title string) (*store.MovieInput, error) {
+func TMDBSearch(title string) ([]TMDBSearchResult, error) {
 	apiKey := os.Getenv("TMDB_API_KEY")
 	if apiKey == "" {
 		return nil, fmt.Errorf("TMDB_API_KEY must be set")
 	}
 
 	searchURL := fmt.Sprintf("%s/search/movie?query=%s", tmdbBase, url.QueryEscape(title))
-
 	resp, err := tmdbGet(searchURL, apiKey)
 	if err != nil {
 		return nil, fmt.Errorf("tmdb search request failed: %w", err)
@@ -82,9 +89,30 @@ func TMDBByTitle(title string) (*store.MovieInput, error) {
 		return nil, fmt.Errorf("%w: %s", ErrNotFound, title)
 	}
 
-	movieID := sr.Results[0].ID
-	detailURL := fmt.Sprintf("%s/movie/%d?append_to_response=credits", tmdbBase, movieID)
+	results := make([]TMDBSearchResult, len(sr.Results))
+	for i, r := range sr.Results {
+		year := r.ReleaseDate
+		if len(year) > 4 {
+			year = year[:4]
+		}
+		var poster string
+		if r.PosterPath != "" {
+			poster = tmdbImageBase + r.PosterPath
+		}
+		results[i] = TMDBSearchResult{ID: r.ID, Title: r.Title, ReleaseYear: year, PosterURL: poster}
+	}
+	return results, nil
+}
 
+// TMDBByID fetches full movie details (including credits) for a specific TMDB movie ID.
+// Requires the TMDB_API_KEY environment variable.
+func TMDBByID(id int64) (*store.MovieInput, error) {
+	apiKey := os.Getenv("TMDB_API_KEY")
+	if apiKey == "" {
+		return nil, fmt.Errorf("TMDB_API_KEY must be set")
+	}
+
+	detailURL := fmt.Sprintf("%s/movie/%d?append_to_response=credits", tmdbBase, id)
 	dresp, err := tmdbGet(detailURL, apiKey)
 	if err != nil {
 		return nil, fmt.Errorf("tmdb detail request failed: %w", err)
@@ -138,4 +166,13 @@ func TMDBByTitle(title string) (*store.MovieInput, error) {
 		CoverURL:    posterURL,
 		TmdbID:      mr.ID,
 	}, nil
+}
+
+// TMDBByTitle searches TMDB for a movie by title and returns full details for the top result.
+func TMDBByTitle(title string) (*store.MovieInput, error) {
+	results, err := TMDBSearch(title)
+	if err != nil {
+		return nil, err
+	}
+	return TMDBByID(results[0].ID)
 }

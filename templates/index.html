@@ -88,9 +88,7 @@
       Scan ISBN
     </button>
     <button class="btn btn-primary"
-            :hx-get="addURL"
-            hx-target="#modal-body"
-            @click="openModal()"
+            @click="openAddModal()"
             x-text="addLabel">
     </button>
   </div>
@@ -230,6 +228,10 @@ function app() {
     setLayout(v) {
       this.layout = v;
       localStorage.setItem('swansea-layout', v);
+    },
+    openAddModal() {
+      document.getElementById('modal').showModal();
+      htmx.ajax('GET', this.addURL, { target: '#modal-body', swap: 'innerHTML' });
     },
     openModal() {
       document.getElementById('modal').showModal();
