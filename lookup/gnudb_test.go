@@ -210,9 +210,11 @@ func TestGnudbByArtistTitle_multiline_title(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GnudbByArtistTitle: %v", err)
 	}
-	// DTITLE lines are concatenated: "Nirvana / Nevermind"
-	if result.Title != "mind" && result.Title != "Nevermind" {
-		// After splitting on " / ", title should come from the concatenated value
-		_ = result
+	// DTITLE lines are concatenated: "Nirvana / Never" + "mind" = "Nirvana / Nevermind"
+	if result.Title != "Nevermind" {
+		t.Errorf("multiline DTITLE: Title = %q, want Nevermind", result.Title)
+	}
+	if len(result.Artists) == 0 || result.Artists[0] != "Nirvana" {
+		t.Errorf("multiline DTITLE: Artists = %v, want [Nirvana]", result.Artists)
 	}
 }

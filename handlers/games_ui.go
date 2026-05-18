@@ -216,7 +216,10 @@ func (h *GamesUI) addForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *GamesUI) create(w http.ResponseWriter, r *http.Request) {
-	in := parseGameForm(w, r)
+	in, err := parseGameForm(w, r)
+	if err != nil {
+		return
+	}
 	if in.Title == "" {
 		http.Error(w, "title is required", http.StatusBadRequest)
 		return
@@ -270,7 +273,10 @@ func (h *GamesUI) update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	in := parseGameForm(w, r)
+	in, err := parseGameForm(w, r)
+	if err != nil {
+		return
+	}
 	if in.Title == "" {
 		http.Error(w, "title is required", http.StatusBadRequest)
 		return
@@ -312,9 +318,12 @@ func (h *GamesUI) deleteGame(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func parseGameForm(w http.ResponseWriter, r *http.Request) store.VideoGameInput {
+func parseGameForm(w http.ResponseWriter, r *http.Request) (store.VideoGameInput, error) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
-	r.ParseForm()
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+		return store.VideoGameInput{}, err
+	}
 	return store.VideoGameInput{
 		Title:       r.FormValue("title"),
 		Platform:    r.FormValue("platform"),
@@ -325,5 +334,5 @@ func parseGameForm(w http.ResponseWriter, r *http.Request) store.VideoGameInput 
 		Genres:      splitLines(r.FormValue("genres")),
 		CoverURL:    r.FormValue("cover_url"),
 		Rating:      r.FormValue("rating"),
-	}
+	}, nil
 }

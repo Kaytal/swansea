@@ -216,7 +216,10 @@ func (h *MusicUI) addForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MusicUI) create(w http.ResponseWriter, r *http.Request) {
-	in := parseMusicForm(w, r)
+	in, err := parseMusicForm(w, r)
+	if err != nil {
+		return
+	}
 	if in.Title == "" {
 		http.Error(w, "title is required", http.StatusBadRequest)
 		return
@@ -270,7 +273,10 @@ func (h *MusicUI) update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	in := parseMusicForm(w, r)
+	in, err := parseMusicForm(w, r)
+	if err != nil {
+		return
+	}
 	if in.Title == "" {
 		http.Error(w, "title is required", http.StatusBadRequest)
 		return
@@ -312,9 +318,12 @@ func (h *MusicUI) deleteAlbum(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func parseMusicForm(w http.ResponseWriter, r *http.Request) store.MusicAlbumInput {
+func parseMusicForm(w http.ResponseWriter, r *http.Request) (store.MusicAlbumInput, error) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
-	r.ParseForm()
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+		return store.MusicAlbumInput{}, err
+	}
 	trackCount, _ := strconv.Atoi(r.FormValue("track_count"))
 	return store.MusicAlbumInput{
 		Title:         r.FormValue("title"),
@@ -326,5 +335,5 @@ func parseMusicForm(w http.ResponseWriter, r *http.Request) store.MusicAlbumInpu
 		TrackCount:    trackCount,
 		CoverURL:      r.FormValue("cover_url"),
 		CatalogNumber: r.FormValue("catalog_number"),
-	}
+	}, nil
 }

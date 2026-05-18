@@ -5,44 +5,44 @@
       hx-swap="innerHTML">
   <div class="form-group">
     <label>Title *</label>
-    <input type="text" name="title" required autofocus>
+    <input type="text" name="title" value="{{if .}}{{.Title}}{{end}}" required autofocus>
   </div>
   <div class="form-row">
     <div class="form-group">
       <label>Platform</label>
-      <input type="text" name="platform" placeholder="PS5, PC, Switch…">
+      <input type="text" name="platform" value="{{if .}}{{.Platform}}{{end}}" placeholder="PS5, PC, Switch…">
     </div>
     <div class="form-group">
       <label>Release date</label>
-      <input type="text" name="release_date" placeholder="2024-01-15">
+      <input type="text" name="release_date" value="{{if .}}{{.ReleaseDate}}{{end}}" placeholder="2024-01-15">
     </div>
   </div>
   <div class="form-group">
     <label>Developers</label>
-    <textarea name="developers" rows="2" placeholder="One developer per line"></textarea>
+    <textarea name="developers" rows="2" placeholder="One developer per line">{{if .}}{{joinLines .Developers}}{{end}}</textarea>
     <p class="form-hint">One developer per line</p>
   </div>
   <div class="form-row">
     <div class="form-group">
       <label>Publisher</label>
-      <input type="text" name="publisher">
+      <input type="text" name="publisher" value="{{if .}}{{.Publisher}}{{end}}">
     </div>
     <div class="form-group">
       <label>Rating</label>
-      <input type="text" name="rating" placeholder="E, T, M…">
+      <input type="text" name="rating" value="{{if .}}{{.Rating}}{{end}}" placeholder="E, T, M…">
     </div>
   </div>
   <div class="form-group">
     <label>Genres</label>
-    <textarea name="genres" rows="2" placeholder="One genre per line"></textarea>
+    <textarea name="genres" rows="2" placeholder="One genre per line">{{if .}}{{joinLines .Genres}}{{end}}</textarea>
   </div>
   <div class="form-group">
     <label>Description</label>
-    <textarea name="description" rows="3"></textarea>
+    <textarea name="description" rows="3">{{if .}}{{.Description}}{{end}}</textarea>
   </div>
   <div class="form-group">
     <label>Cover image URL</label>
-    <input type="url" name="cover_url">
+    <input type="url" name="cover_url" value="{{if .}}{{.CoverURL}}{{end}}">
   </div>
   <div class="form-actions">
     <button type="button" class="btn btn-ghost" @click="closeModal()">Cancel</button>

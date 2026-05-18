@@ -216,7 +216,10 @@ func (h *MoviesUI) addForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MoviesUI) create(w http.ResponseWriter, r *http.Request) {
-	in := parseMovieForm(w, r)
+	in, err := parseMovieForm(w, r)
+	if err != nil {
+		return
+	}
 	if in.Title == "" {
 		http.Error(w, "title is required", http.StatusBadRequest)
 		return
@@ -270,7 +273,10 @@ func (h *MoviesUI) update(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
-	in := parseMovieForm(w, r)
+	in, err := parseMovieForm(w, r)
+	if err != nil {
+		return
+	}
 	if in.Title == "" {
 		http.Error(w, "title is required", http.StatusBadRequest)
 		return
@@ -312,9 +318,12 @@ func (h *MoviesUI) deleteMovie(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func parseMovieForm(w http.ResponseWriter, r *http.Request) store.MovieInput {
+func parseMovieForm(w http.ResponseWriter, r *http.Request) (store.MovieInput, error) {
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
-	r.ParseForm()
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "request too large", http.StatusRequestEntityTooLarge)
+		return store.MovieInput{}, err
+	}
 	runtime, _ := strconv.Atoi(r.FormValue("runtime"))
 	tmdbID, _ := strconv.ParseInt(r.FormValue("tmdb_id"), 10, 64)
 	return store.MovieInput{
@@ -327,5 +336,5 @@ func parseMovieForm(w http.ResponseWriter, r *http.Request) store.MovieInput {
 		Genres:      splitLines(r.FormValue("genres")),
 		CoverURL:    r.FormValue("cover_url"),
 		TmdbID:      tmdbID,
-	}
+	}, nil
 }

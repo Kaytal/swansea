@@ -32,6 +32,8 @@ The app is available at **http://localhost:8099**.
 | `GOOGLE_BOOKS_API_KEY` | — | Google Books API key (required to avoid 429s on book lookups) |
 | `SCREENSCRAPER_USERNAME` | — | ScreenScraper.fr account username (video game metadata) |
 | `SCREENSCRAPER_PASSWORD` | — | ScreenScraper.fr account password (video game metadata) |
+| `SCREENSCRAPER_DEVID` | — | ScreenScraper.fr developer ID (optional) |
+| `SCREENSCRAPER_DEVPASSWORD` | — | ScreenScraper.fr developer password (optional) |
 | `TMDB_API_KEY` | — | The Movie Database API key (movie metadata) |
 
 Copy `.env.example` to `.env` and fill in your keys. Both Docker Compose (via `env_file`) and local dev pick it up automatically.

@@ -45,6 +45,15 @@ type tmdbMovieResponse struct {
 	} `json:"credits"`
 }
 
+func tmdbGet(reqURL, apiKey string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	return HTTPClient.Do(req)
+}
+
 // TMDBByTitle searches The Movie Database for a movie by title.
 // Requires the TMDB_API_KEY environment variable.
 func TMDBByTitle(title string) (*store.MovieInput, error) {
@@ -53,10 +62,9 @@ func TMDBByTitle(title string) (*store.MovieInput, error) {
 		return nil, fmt.Errorf("TMDB_API_KEY must be set")
 	}
 
-	searchURL := fmt.Sprintf("%s/search/movie?query=%s&api_key=%s",
-		tmdbBase, url.QueryEscape(title), url.QueryEscape(apiKey))
+	searchURL := fmt.Sprintf("%s/search/movie?query=%s", tmdbBase, url.QueryEscape(title))
 
-	resp, err := HTTPClient.Get(searchURL)
+	resp, err := tmdbGet(searchURL, apiKey)
 	if err != nil {
 		return nil, fmt.Errorf("tmdb search request failed: %w", err)
 	}
@@ -75,10 +83,9 @@ func TMDBByTitle(title string) (*store.MovieInput, error) {
 	}
 
 	movieID := sr.Results[0].ID
-	detailURL := fmt.Sprintf("%s/movie/%d?append_to_response=credits&api_key=%s",
-		tmdbBase, movieID, url.QueryEscape(apiKey))
+	detailURL := fmt.Sprintf("%s/movie/%d?append_to_response=credits", tmdbBase, movieID)
 
-	dresp, err := HTTPClient.Get(detailURL)
+	dresp, err := tmdbGet(detailURL, apiKey)
 	if err != nil {
 		return nil, fmt.Errorf("tmdb detail request failed: %w", err)
 	}

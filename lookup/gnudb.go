@@ -49,6 +49,9 @@ func gnudbFind(query string) (discID, category string, err error) {
 	statusLine := scanner.Text()
 
 	// 200 = exact match, 211 = inexact matches follow
+	if len(statusLine) < 3 {
+		return "", "", fmt.Errorf("%w: %s", ErrNotFound, query)
+	}
 	code := statusLine[:3]
 	switch code {
 	case "200":
@@ -77,7 +80,19 @@ func gnudbFind(query string) (discID, category string, err error) {
 	}
 }
 
+func isAlphanumeric(s string) bool {
+	for _, c := range s {
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+			return false
+		}
+	}
+	return len(s) > 0
+}
+
 func gnudbRead(category, discID string) (*store.MusicAlbumInput, error) {
+	if !isAlphanumeric(category) || !isAlphanumeric(discID) {
+		return nil, fmt.Errorf("%w: unexpected gnudb field format", ErrNotFound)
+	}
 	params := url.Values{}
 	params.Set("cmd", fmt.Sprintf("cddb read %s %s", category, discID))
 	params.Set("hello", gnudbHello)
